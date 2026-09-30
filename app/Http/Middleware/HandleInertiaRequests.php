@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\FundSetting;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -41,7 +42,24 @@ class HandleInertiaRequests extends Middleware
             'auth' => [
                 'user' => $request->user(),
             ],
+            'fundRoles' => fn (): array => $this->fundRoles($request),
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
+        ];
+    }
+
+    /** @return array{treasurer: bool, administrator: bool} */
+    private function fundRoles(Request $request): array
+    {
+        $user = $request->user();
+        if ($user === null) {
+            return ['treasurer' => false, 'administrator' => false];
+        }
+
+        $fund = FundSetting::query()->find(1);
+
+        return [
+            'treasurer' => $fund?->isTreasurer($user) ?? false,
+            'administrator' => $fund?->isAdministrator($user) ?? false,
         ];
     }
 }

@@ -6,6 +6,7 @@ use App\Actions\Fund\FundBalances;
 use App\Actions\Fund\FundContributions;
 use App\Actions\Fund\FundLoans;
 use App\Enums\JournalAccount;
+use App\Enums\LoanStatus;
 use App\Http\Requests\Fund\FundCommandRequest;
 use App\Http\Requests\Fund\FundDisbursementRequest;
 use App\Http\Requests\Fund\FundLoanRequest;
@@ -31,8 +32,16 @@ class FundLoanController extends Controller
                 return $loan;
             }),
             'isTreasurer' => $treasurer,
-            'users' => $treasurer ? User::query()->orderBy('name')->get(['id', 'name']) : [],
-            'banks' => $treasurer ? Bank::query()->where('active', true)->orderBy('name')->get(['id', 'name']) : [],
+        ]);
+    }
+
+    public function create(Request $request, FundBalances $balances): Response
+    {
+        abort_unless(FundSetting::current()->isTreasurer($request->user()), 403);
+
+        return Inertia::render('fund/LoanCreate', [
+            'users' => User::query()->orderBy('name')->get(['id', 'name']),
+            'availableCents' => $balances->summary()['available'],
         ]);
     }
 
@@ -42,6 +51,18 @@ class FundLoanController extends Controller
         abort_unless($treasurer || $loan->user_id === $request->user()->id, 403);
 
         return Inertia::render('fund/Loan', ['loan' => $loan->load('user:id,name', 'installments'), 'outstandingCents' => $balances->account(JournalAccount::LoanPrincipal, loanId: $loan->id), 'paidInstallmentIds' => $contributions->paidInstallmentIds(), 'isTreasurer' => $treasurer, 'banks' => $treasurer ? Bank::query()->where('active', true)->orderBy('name')->get(['id', 'name']) : []]);
+    }
+
+    public function correction(Request $request, Loan $loan, FundLoans $loans): Response
+    {
+        abort_unless(FundSetting::current()->isTreasurer($request->user()), 403);
+        abort_unless($loan->status === LoanStatus::Disbursed, 409, 'Solo se corrige un desembolso vigente.');
+
+        return Inertia::render('fund/LoanCorrection', [
+            'loan' => $loan->load('user:id,name'),
+            'banks' => Bank::query()->where('active', true)->orderBy('name')->get(['id', 'name']),
+            'hasDependentPayments' => $loans->hasDependentPayments($loan),
+        ]);
     }
 
     public function store(FundLoanRequest $request, FundLoans $loans): RedirectResponse

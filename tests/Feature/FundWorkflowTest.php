@@ -198,7 +198,8 @@ test('the first contribution follows the fund local month even across a UTC date
 test('the member sees their fund and contribution form without treasury settings', function () {
     [$treasurer, $member] = prepareFund();
 
-    $this->actingAs($member)->get(route('fund.index'))->assertInertia(fn (Assert $page) => $page->component('fund/Index')->where('isTreasurer', false)->where('contributedCents', 0)->has('paidPeriods.data', 0));
+    $this->actingAs($member)->get(route('fund.index'))->assertRedirect(route('dashboard'));
+    $this->actingAs($member)->get(route('dashboard'))->assertInertia(fn (Assert $page) => $page->component('Dashboard')->where('isTreasurer', false)->where('contributedCents', 0)->where('nextContribution.month', now('America/Guayaquil')->format('Y-m')));
     $this->actingAs($member)->get(route('fund.transactions.create'))->assertInertia(fn (Assert $page) => $page->component('fund/TransactionForm')->where('hasPendingContribution', false)->has('banks', 1));
     $this->actingAs($member)->get(route('fund.contribution-periods.index'))->assertForbidden();
     $this->actingAs($treasurer)->get(route('fund.contribution-periods.index'))->assertOk();

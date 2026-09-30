@@ -2,19 +2,26 @@
 
 use App\Http\Controllers\FundAdministrationController;
 use App\Http\Controllers\FundConfigurationController;
+use App\Http\Controllers\FundContributionController;
 use App\Http\Controllers\FundController;
 use App\Http\Controllers\FundLoanController;
 use App\Http\Controllers\FundTransactionController;
+use App\Http\Controllers\FundTreasuryController;
 use Illuminate\Support\Facades\Route;
 
 Route::inertia('/', 'Welcome')->name('home');
 
 Route::middleware(['auth', 'verified'])->group(function () {
-    Route::inertia('dashboard', 'Dashboard')->name('dashboard');
+    Route::get('dashboard', [FundController::class, 'index'])->name('dashboard');
     Route::prefix('fund')->name('fund.')->group(function () {
-        Route::get('/', [FundController::class, 'index'])->name('index');
+        Route::get('/', fn () => to_route('dashboard'))->name('index');
+        Route::get('contributions', [FundContributionController::class, 'index'])->name('contributions.index');
+        Route::get('treasury', [FundTreasuryController::class, 'index'])->name('treasury.index');
+        Route::get('treasury/loans/create', [FundLoanController::class, 'create'])->name('treasury.loans.create');
         Route::get('transactions/create', [FundTransactionController::class, 'create'])->name('transactions.create');
+        Route::get('transactions', [FundTransactionController::class, 'index'])->name('transactions.index');
         Route::post('transactions', [FundTransactionController::class, 'store'])->name('transactions.store');
+        Route::get('transactions/{transaction}/edit', [FundTransactionController::class, 'edit'])->name('transactions.edit');
         Route::get('transactions/{transaction}', [FundTransactionController::class, 'show'])->name('transactions.show');
         Route::post('transactions/{transaction}/approve', [FundTransactionController::class, 'approve'])->name('transactions.approve');
         Route::post('transactions/{transaction}/reject', [FundTransactionController::class, 'reject'])->name('transactions.reject');
@@ -27,6 +34,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::patch('banks/{bank}', [FundConfigurationController::class, 'updateBank'])->name('banks.update');
         Route::get('loans', [FundLoanController::class, 'index'])->name('loans.index');
         Route::post('loans', [FundLoanController::class, 'store'])->name('loans.store');
+        Route::get('loans/{loan}/correction', [FundLoanController::class, 'correction'])->name('loans.correction');
         Route::get('loans/{loan}', [FundLoanController::class, 'show'])->name('loans.show');
         Route::post('loans/{loan}/disburse', [FundLoanController::class, 'disburse'])->name('loans.disburse');
         Route::post('loans/{loan}/cancel', [FundLoanController::class, 'cancel'])->name('loans.cancel');

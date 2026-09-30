@@ -73,8 +73,7 @@ class FundLoans
         return $this->evidences->using($file, fn (array $evidence): int => $this->operations->handle($actor, 'loan.correct', $key, ['id' => $loanId, ...$data, 'evidence_sha256' => $evidence['sha256']], function () use ($actor, $loanId, $data, $evidence): int {
             $original = Loan::query()->findOrFail($loanId);
             abort_unless($original->status === LoanStatus::Disbursed, 409, 'Solo se corrige un desembolso vigente.');
-            $dependencies = DB::table('transaction_allocations as a')->join('loan_installments as i', 'i.id', '=', 'a.loan_installment_id')->join('fund_transactions as t', 't.id', '=', 'a.fund_transaction_id')->where('i.loan_id', $loanId)->whereIn('t.status', [TransactionStatus::Pending->value, TransactionStatus::Approved->value])->whereNull('t.superseded_by_id')->exists();
-            if ($dependencies) {
+            if ($this->hasDependentPayments($original)) {
                 throw ValidationException::withMessages(['correction' => 'El préstamo tiene pagos registrados sobre su tabla.']);
             }
             $entry = DB::table('journal_entries')->where('loan_id', $loanId)->value('id');
@@ -90,6 +89,17 @@ class FundLoans
 
             return $replacement->id;
         }, 'treasurer'));
+    }
+
+    public function hasDependentPayments(Loan $loan): bool
+    {
+        return DB::table('transaction_allocations as a')
+            ->join('loan_installments as i', 'i.id', '=', 'a.loan_installment_id')
+            ->join('fund_transactions as t', 't.id', '=', 'a.fund_transaction_id')
+            ->where('i.loan_id', $loan->id)
+            ->whereIn('t.status', [TransactionStatus::Pending->value, TransactionStatus::Approved->value])
+            ->whereNull('t.superseded_by_id')
+            ->exists();
     }
 
     /** @param LoanData $data */

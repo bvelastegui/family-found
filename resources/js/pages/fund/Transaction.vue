@@ -1,244 +1,331 @@
 <script setup lang="ts">
+import { computed } from 'vue';
 import { Head, Link, useForm } from '@inertiajs/vue3';
-import { approve, reject, correct } from '@/routes/fund/transactions';
+import { dashboard } from '@/routes';
+import {
+    index as transactionsIndex,
+    approve,
+    reject,
+    edit,
+} from '@/routes/fund/transactions';
 import { show as evidenceShow } from '@/routes/fund/evidences';
-import { index as fundIndex } from '@/routes/fund';
-import { operationKey, usd } from '@/lib/fund';
+import {
+    Card,
+    CardContent,
+    CardDescription,
+    CardHeader,
+    CardTitle,
+} from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import AutoResizeTextarea from '@/components/AutoResizeTextarea.vue';
+import { Label } from '@/components/ui/label';
+import FundStatus from '@/components/FundStatus.vue';
+import {
+    fundDate,
+    fundDateTime,
+    fundMonth,
+    operationKey,
+    usd,
+} from '@/lib/fund';
 
 type Transaction = {
     id: number;
     status: string;
     amount_cents: number;
     transaction_date: string;
+    created_at: string;
     bank_name: string;
     reference: string;
     evidence_id: number;
-    corrected_from_id: number | null;
     superseded_by_id: number | null;
+};
+type Allocation = {
+    id: number;
+    amount_cents: number;
+    contribution_period_id: number | null;
+    loan_installment_id: number | null;
+    month: string | null;
+    installment_number: number | null;
+    loan_id: number | null;
+    capital_cents: number;
+    interest_cents: number;
+};
+type Event = {
+    id: number;
+    event: string;
+    created_at: string;
+    actor_id: number;
+    actor_name: string;
+    data: string | { reason?: string };
 };
 const props = defineProps<{
     transaction: Transaction;
-    allocations: {
-        id: number;
-        amount_cents: number;
-        contribution_period_id: number | null;
-        loan_installment_id: number | null;
-        month: string | null;
-        installment_number: number | null;
-        loan_id: number | null;
-        capital_cents: number;
-        interest_cents: number;
-    }[];
-    events: {
-        id: number;
-        event: string;
-        created_at: string;
-        data: Record<string, unknown> | string;
-    }[];
+    allocations: Allocation[];
+    events: Event[];
     isTreasurer: boolean;
-    banks: { id: number; name: string }[];
 }>();
 defineOptions({
-    layout: { breadcrumbs: [{ title: 'Fondo familiar', href: fundIndex() }] },
+    layout: {
+        breadcrumbs: [
+            { title: 'Inicio', href: dashboard() },
+            { title: 'Transacciones', href: transactionsIndex() },
+        ],
+    },
 });
 const approval = useForm({ idempotency_key: operationKey() });
 const rejection = useForm({ idempotency_key: operationKey(), reason: '' });
-const correction = useForm({
-    idempotency_key: operationKey(),
-    reason: '',
-    bank_id:
-        props.banks.find((bank) => bank.name === props.transaction.bank_name)
-            ?.id ?? '',
-    reference: props.transaction.reference,
-    transaction_date: props.transaction.transaction_date,
-    amount: (props.transaction.amount_cents / 100).toFixed(2),
-    period_ids: props.allocations.flatMap((item) =>
-        item.contribution_period_id ? [item.contribution_period_id] : [],
-    ),
-    installment_ids: props.allocations.flatMap((item) =>
-        item.loan_installment_id ? [item.loan_installment_id] : [],
-    ),
-    evidence: null as File | null,
-});
+const approvalEvent = computed(() =>
+    props.events.find((event) => event.event === 'transaction.approved'),
+);
+
+function eventTitle(event: Event): string {
+    const titles: Record<string, string> = {
+        'transaction.registered': 'Comprobante registrado',
+        'transaction.approved': 'Transferencia aprobada',
+        'transaction.rejected': 'Transferencia rechazada',
+        'transaction.corrected': 'Corrección autorizada',
+    };
+
+    return titles[event.event] ?? 'Movimiento registrado';
+}
+
+function eventDescription(event: Event): string | null {
+    const descriptions: Record<string, string> = {
+        'transaction.registered':
+            'Se envió a revisión, sin efecto en el fondo.',
+        'transaction.approved':
+            'La transferencia se concilió y se asentó en el ledger.',
+        'transaction.rejected': 'No se generaron movimientos contables.',
+        'transaction.corrected':
+            'Se conservó el original y se contabilizó el reemplazo.',
+    };
+
+    return descriptions[event.event] ?? null;
+}
+
+function reason(event: Event): string | null {
+    try {
+        const data =
+            typeof event.data === 'string'
+                ? (JSON.parse(event.data) as { reason?: string })
+                : event.data;
+        return typeof data.reason === 'string' ? data.reason : null;
+    } catch {
+        return null;
+    }
+}
 </script>
 
 <template>
-    <main class="mx-auto flex w-full max-w-3xl flex-col gap-6 p-4 md:p-6">
+    <main class="mx-auto flex w-full max-w-4xl flex-col gap-6 p-4 md:p-8">
         <Head :title="`Transferencia #${transaction.id}`" />
-        <div>
-            <h1 class="text-2xl font-semibold">
-                Transferencia #{{ transaction.id }}
-            </h1>
-            <p class="text-muted-foreground">
-                {{ transaction.status }} · {{ transaction.transaction_date }}
-            </p>
-        </div>
-        <div class="grid gap-4 rounded-xl border bg-card p-5 sm:grid-cols-2">
-            <p>
-                <span class="text-muted-foreground">Banco: </span
-                >{{ transaction.bank_name }}
-            </p>
-            <p>
-                <span class="text-muted-foreground">Comprobante: </span
-                >{{ transaction.reference }}
-            </p>
-            <p>
-                <span class="text-muted-foreground">Monto: </span
-                >{{ usd(transaction.amount_cents) }}
-            </p>
-            <a
-                class="underline"
-                :href="evidenceShow(transaction.evidence_id).url"
-                >Descargar evidencia</a
-            >
-        </div>
-        <section class="space-y-2">
-            <h2 class="text-lg font-medium">Asignaciones</h2>
-            <ul class="divide-y rounded-xl border">
-                <li
-                    v-for="allocation in allocations"
-                    :key="allocation.id"
-                    class="flex justify-between p-3"
-                >
-                    <span>{{
-                        allocation.contribution_period_id
-                            ? `Aporte de ${allocation.month}`
-                            : `Préstamo #${allocation.loan_id}, cuota ${allocation.installment_number} (capital ${usd(allocation.capital_cents)}, interés ${usd(allocation.interest_cents)})`
-                    }}</span
-                    ><span>{{ usd(allocation.amount_cents) }}</span>
-                </li>
-            </ul>
-        </section>
-        <section
-            v-if="isTreasurer && transaction.status === 'pending'"
-            class="space-y-4 rounded-xl border p-5"
+        <header class="flex flex-wrap items-center justify-between gap-3">
+            <div>
+                <p class="text-sm text-muted-foreground">
+                    Historial de transferencias
+                </p>
+                <h1 class="text-3xl font-semibold tracking-tight">
+                    Comprobante #{{ transaction.id }}
+                </h1>
+                <p class="mt-1 text-muted-foreground">
+                    Transferencia del
+                    {{ fundDate(transaction.transaction_date) }}
+                </p>
+                <p class="mt-1 text-sm text-muted-foreground">
+                    Registrada en el sistema el
+                    {{ fundDateTime(transaction.created_at) }}
+                </p>
+                <p v-if="approvalEvent" class="mt-2 text-sm font-medium">
+                    Autorizada por {{ approvalEvent.actor_name }} el
+                    {{ fundDateTime(approvalEvent.created_at) }}
+                </p>
+            </div>
+            <FundStatus :status="transaction.status" />
+        </header>
+        <Card
+            ><CardHeader
+                ><CardTitle>Información bancaria</CardTitle
+                ><CardDescription
+                    >Este registro se contabiliza únicamente si el tesorero lo
+                    aprueba.</CardDescription
+                ></CardHeader
+            ><CardContent class="grid gap-4 text-sm sm:grid-cols-2"
+                ><div>
+                    <p class="text-muted-foreground">Banco de origen</p>
+                    <p class="font-medium">{{ transaction.bank_name }}</p>
+                </div>
+                <div>
+                    <p class="text-muted-foreground">Número de comprobante</p>
+                    <p class="font-medium">{{ transaction.reference }}</p>
+                </div>
+                <div>
+                    <p class="text-muted-foreground">Monto transferido</p>
+                    <p class="text-xl font-semibold">
+                        {{ usd(transaction.amount_cents) }}
+                    </p>
+                </div>
+                <div>
+                    <p class="text-muted-foreground">Evidencia</p>
+                    <a
+                        :href="evidenceShow(transaction.evidence_id).url"
+                        class="font-medium underline underline-offset-4"
+                        >Descargar comprobante</a
+                    >
+                </div></CardContent
+            ></Card
         >
-            <h2 class="text-lg font-medium">Conciliación</h2>
-            <form @submit.prevent="approval.post(approve(transaction.id).url)">
-                <Button :disabled="approval.processing"
-                    >Aprobar y contabilizar</Button
+        <Card
+            ><CardHeader><CardTitle>Asignación del pago</CardTitle></CardHeader
+            ><CardContent
+                ><ul class="divide-y">
+                    <li
+                        v-for="allocation in allocations"
+                        :key="allocation.id"
+                        class="flex flex-wrap justify-between gap-2 py-3"
+                    >
+                        <div>
+                            <p class="font-medium">
+                                {{
+                                    allocation.contribution_period_id
+                                        ? `Aporte de ${allocation.month ? fundMonth(allocation.month.slice(0, 7)) : ''}`
+                                        : `Préstamo #${allocation.loan_id}, cuota ${allocation.installment_number}`
+                                }}
+                            </p>
+                            <p
+                                v-if="allocation.loan_installment_id"
+                                class="text-sm text-muted-foreground"
+                            >
+                                Capital {{ usd(allocation.capital_cents) }} ·
+                                Interés {{ usd(allocation.interest_cents) }}
+                            </p>
+                        </div>
+                        <strong>{{ usd(allocation.amount_cents) }}</strong>
+                    </li>
+                </ul></CardContent
+            ></Card
+        >
+        <Card v-if="isTreasurer && transaction.status === 'pending'"
+            ><CardHeader
+                ><CardTitle>Conciliar comprobante</CardTitle
+                ><CardDescription
+                    >Revisa la evidencia y el monto antes de decidir. El rechazo
+                    requiere un motivo.</CardDescription
+                ></CardHeader
+            ><CardContent class="flex flex-col gap-5"
+                ><form
+                    @submit.prevent="approval.post(approve(transaction.id).url)"
                 >
-                <p class="text-sm text-destructive">
-                    {{ approval.errors.idempotency_key }}
-                </p>
-            </form>
-            <form
-                class="flex flex-col gap-2"
-                @submit.prevent="rejection.post(reject(transaction.id).url)"
-            >
-                <label for="reason">Motivo del rechazo</label
-                ><Input id="reason" v-model="rejection.reason" required />
-                <p class="text-sm text-destructive">
-                    {{ rejection.errors.reason }}
-                </p>
-                <Button variant="outline" :disabled="rejection.processing"
-                    >Rechazar sin asiento</Button
+                    <Button :disabled="approval.processing"
+                        >Aprobar y contabilizar</Button
+                    >
+                    <p
+                        v-if="approval.hasErrors"
+                        role="alert"
+                        class="mt-2 text-sm text-destructive"
+                    >
+                        La aprobación no se completó. Comprueba que las
+                        asignaciones sigan siendo válidas.
+                    </p>
+                </form>
+                <form
+                    class="flex flex-col gap-2"
+                    @submit.prevent="rejection.post(reject(transaction.id).url)"
                 >
-            </form>
-        </section>
-        <section
+                    <Label for="rejection-reason">Motivo del rechazo</Label
+                    ><AutoResizeTextarea
+                        id="rejection-reason"
+                        v-model="rejection.reason"
+                        required
+                        :aria-invalid="!!rejection.errors.reason"
+                        maxlength="5000"
+                    />
+                    <p
+                        v-if="rejection.errors.reason"
+                        class="text-sm text-destructive"
+                    >
+                        {{ rejection.errors.reason }}
+                    </p>
+                    <Button variant="outline" :disabled="rejection.processing"
+                        >Rechazar sin asiento</Button
+                    >
+                </form></CardContent
+            ></Card
+        >
+        <Card
             v-if="
                 isTreasurer &&
                 transaction.status === 'approved' &&
                 !transaction.superseded_by_id
             "
-            class="rounded-xl border p-5"
+            ><CardHeader
+                ><CardTitle>¿Necesitas corregir el registro?</CardTitle
+                ><CardDescription
+                    >La corrección conserva el comprobante original y
+                    contabiliza la reversión y el reemplazo
+                    juntos.</CardDescription
+                ></CardHeader
+            ><CardContent
+                ><Button variant="outline" as-child
+                    ><Link :href="edit(transaction.id)"
+                        >Preparar corrección</Link
+                    ></Button
+                ></CardContent
+            ></Card
         >
-            <h2 class="text-lg font-medium">Corrección contable</h2>
-            <p class="text-sm text-muted-foreground">
-                La reversión y el reemplazo se registran juntos. Debes indicar
-                un motivo y aportar todos los datos y asignaciones correctos.
-            </p>
-            <form
-                class="mt-4 grid gap-3"
-                @submit.prevent="
-                    correction.post(correct(transaction.id).url, {
-                        forceFormData: true,
-                    })
-                "
-            >
-                <Input
-                    v-model="correction.reason"
-                    placeholder="Motivo"
-                    required
-                /><label class="grid gap-1 text-sm"
-                    >Banco<select
-                        v-model="correction.bank_id"
-                        required
-                        class="h-9 rounded-md border bg-background px-3"
+        <Card
+            ><CardHeader
+                ><CardTitle>Historial de decisiones</CardTitle
+                ><CardDescription
+                    >Quién intervino y qué sucedió con este comprobante.
+                    Horarios de Ecuador.</CardDescription
+                ></CardHeader
+            ><CardContent
+                ><ol
+                    v-if="events.length"
+                    class="text-sm"
+                    aria-label="Decisiones sobre la transferencia"
+                >
+                    <li
+                        v-for="event in events"
+                        :key="event.id"
+                        class="relative border-s-2 border-border ps-5 pb-6 last:border-transparent last:pb-0"
                     >
-                        <option value="">Selecciona banco</option>
-                        <option
-                            v-for="bank in banks"
-                            :key="bank.id"
-                            :value="bank.id"
+                        <span
+                            class="absolute -start-1.5 top-0.5 size-3 rounded-full border-2 border-primary bg-background"
+                            aria-hidden="true"
+                        />
+                        <p class="font-semibold">{{ eventTitle(event) }}</p>
+                        <p class="mt-1 text-muted-foreground">
+                            {{ event.actor_name }} ·
+                            <time
+                                :datetime="
+                                    event.created_at.replace(' ', 'T') + 'Z'
+                                "
+                                >{{ fundDateTime(event.created_at) }}</time
+                            >
+                        </p>
+                        <p
+                            v-if="eventDescription(event)"
+                            class="mt-2 text-muted-foreground"
                         >
-                            {{ bank.name }}
-                        </option>
-                    </select></label
-                ><Input
-                    v-model="correction.reference"
-                    placeholder="Comprobante"
-                    required
-                /><Input
-                    v-model="correction.transaction_date"
-                    type="date"
-                    required
-                /><Input
-                    v-model="correction.amount"
-                    inputmode="decimal"
-                    required
-                /><label class="text-sm"
-                    >Meses corregidos, identificadores separados por comas<Input
-                        :model-value="correction.period_ids.join(',')"
-                        @update:model-value="
-                            correction.period_ids = String($event)
-                                .split(',')
-                                .map(Number)
-                                .filter(Boolean)
-                        " /></label
-                ><label class="text-sm"
-                    >Cuotas corregidas, identificadores separados por
-                    comas<Input
-                        :model-value="correction.installment_ids.join(',')"
-                        @update:model-value="
-                            correction.installment_ids = String($event)
-                                .split(',')
-                                .map(Number)
-                                .filter(Boolean)
-                        " /></label
-                ><Input
-                    type="file"
-                    accept="image/jpeg,image/png,application/pdf"
-                    required
-                    @change="
-                        correction.evidence =
-                            ($event.target as HTMLInputElement).files?.[0] ??
-                            null
-                    "
-                />
-                <p
-                    v-for="(message, field) in correction.errors"
-                    :key="field"
-                    class="text-sm text-destructive"
-                >
-                    {{ field }}: {{ message }}
-                </p>
-                <Button variant="outline" :disabled="correction.processing"
-                    >Corregir con reversión y reemplazo</Button
-                >
-            </form>
-        </section>
-        <section class="space-y-2">
-            <h2 class="text-lg font-medium">Historial</h2>
-            <ul class="divide-y rounded-xl border">
-                <li v-for="event in events" :key="event.id" class="p-3 text-sm">
-                    {{ event.created_at }} · {{ event.event }} ·
-                    {{ event.data }}
-                </li>
-            </ul>
-        </section>
+                            {{ eventDescription(event) }}
+                        </p>
+                        <p
+                            v-if="reason(event)"
+                            class="mt-2 rounded-md bg-muted px-3 py-2 break-words whitespace-pre-wrap"
+                        >
+                            Motivo: {{ reason(event) }}
+                        </p>
+                    </li>
+                </ol>
+                <p v-else class="text-muted-foreground">
+                    Todavía no hay decisiones registradas.
+                </p></CardContent
+            ></Card
+        ><Link
+            :href="transactionsIndex()"
+            class="text-sm underline underline-offset-4"
+            >Volver al historial</Link
+        >
     </main>
 </template>

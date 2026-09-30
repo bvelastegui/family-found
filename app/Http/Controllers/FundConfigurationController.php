@@ -20,7 +20,7 @@ class FundConfigurationController extends Controller
     {
         abort_unless(FundSetting::current()->isTreasurer($request->user()), 403);
 
-        return Inertia::render('fund/Configuration', ['periods' => ContributionPeriod::query()->orderByDesc('month')->paginate(15), 'banks' => Bank::query()->orderBy('name')->paginate(15, ['*'], 'banks')]);
+        return Inertia::render('fund/ContributionSettings', ['periods' => ContributionPeriod::query()->orderByDesc('month')->paginate(15)]);
     }
 
     public function storePeriod(FundContributionPeriodRequest $request, FundContributions $contributions): RedirectResponse
@@ -32,7 +32,9 @@ class FundConfigurationController extends Controller
 
     public function banks(Request $request): Response
     {
-        return $this->periods($request);
+        abort_unless(FundSetting::current()->isTreasurer($request->user()), 403);
+
+        return Inertia::render('fund/Banks', ['banks' => Bank::query()->orderBy('name')->paginate(15)]);
     }
 
     public function storeBank(FundBankRequest $request, FundAdministration $administration): RedirectResponse

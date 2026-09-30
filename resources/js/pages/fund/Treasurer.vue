@@ -1,16 +1,22 @@
 <script setup lang="ts">
-import { Head, Link, useForm } from '@inertiajs/vue3';
-import { index as fundIndex } from '@/routes/fund';
-import { update } from '@/routes/administration/treasurer';
-import { operationKey, type FundPagination } from '@/lib/fund';
+import { Head, useForm } from '@inertiajs/vue3';
+import { dashboard } from '@/routes';
+import { edit, update } from '@/routes/administration/treasurer';
+import { operationKey, type FundPagination as Pagination } from '@/lib/fund';
 import { Button } from '@/components/ui/button';
+import FundPagination from '@/components/FundPagination.vue';
 
 defineProps<{
     treasurerId: number | null;
-    users: FundPagination<{ id: number; name: string; email: string }>;
+    users: Pagination<{ id: number; name: string; email: string }>;
 }>();
 defineOptions({
-    layout: { breadcrumbs: [{ title: 'Fondo familiar', href: fundIndex() }] },
+    layout: {
+        breadcrumbs: [
+            { title: 'Inicio', href: dashboard() },
+            { title: 'Administración', href: edit() },
+        ],
+    },
 });
 const form = useForm({ idempotency_key: operationKey(), user_id: '' });
 </script>
@@ -61,15 +67,10 @@ const form = useForm({ idempotency_key: operationKey(), user_id: '' });
             </p>
             <Button :disabled="form.processing">Confirmar designación</Button>
         </form>
-        <nav class="flex gap-2" aria-label="Páginas de participantes">
-            <Link
-                v-for="(link, i) in users.links"
-                :key="i"
-                v-show="link.url"
-                class="rounded border px-2 py-1"
-                :href="link.url ?? fundIndex().url"
-                v-html="link.label"
-            />
-        </nav>
+        <FundPagination
+            :links="users.links"
+            :last-page="users.last_page"
+            label="Páginas de participantes"
+        />
     </main>
 </template>
