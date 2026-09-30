@@ -1,6 +1,11 @@
 <?php
 
+use App\Actions\Fund\FundAdministration;
+use App\Actions\Fund\FundContributions;
+use App\Actions\Fund\InstallFund;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Str;
 use Tests\TestCase;
 
 /*
@@ -47,4 +52,17 @@ expect()->extend('toBeOne', function () {
 function something()
 {
     // ..
+}
+
+/** @return array{User, User, int} */
+function prepareFund(): array
+{
+    $fund = app(InstallFund::class)->handle('Administradora', 'admin@familia.test', 'password-seguro-inicial');
+    $admin = User::findOrFail($fund->administrator_id);
+    app(FundAdministration::class)->treasurer($admin, (string) Str::uuid(), $admin->id);
+    $bankId = app(FundAdministration::class)->bank($admin, (string) Str::uuid(), 'Banco familiar', true);
+    $member = User::factory()->create();
+    app(FundContributions::class)->setPeriod($admin, (string) Str::uuid(), now('America/Guayaquil')->format('Y-m'), '25.00');
+
+    return [$admin, $member, $bankId];
 }

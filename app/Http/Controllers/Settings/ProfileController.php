@@ -5,10 +5,15 @@ namespace App\Http\Controllers\Settings;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Settings\ProfileDeleteRequest;
 use App\Http\Requests\Settings\ProfileUpdateRequest;
+use App\Models\FundSetting;
+use App\Models\FundTransaction;
+use App\Models\Loan;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -49,6 +54,11 @@ class ProfileController extends Controller
     public function destroy(ProfileDeleteRequest $request): RedirectResponse
     {
         $user = $request->user();
+
+        if (Schema::hasTable('fund_settings') && (FundSetting::query()->where('administrator_id', $user->id)->orWhere('treasurer_id', $user->id)->exists()
+            || FundTransaction::query()->where('user_id', $user->id)->exists() || Loan::query()->where('user_id', $user->id)->exists())) {
+            throw ValidationException::withMessages(['password' => 'La cuenta tiene responsabilidades o historial financiero y no puede eliminarse.']);
+        }
 
         Auth::logout();
 
