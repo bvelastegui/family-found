@@ -1,32 +1,32 @@
 schema: spec-driven
 
 context: |
-    Aplicación web para un fondo familiar multipropósito.
-    Proyecto existente: PHP 8.5, Laravel 13, Vue 3 e Inertia 3.
-    Motor usado para implementar y probar: MySQL con InnoDB. La aplicación conecta
-    a family_found y la suite de pruebas usa family_found_testing por separado.
-    Documentación del producto en español, con encabezados estructurales de OpenSpec.
-    Moneda única USD. El sistema comienza con todos los saldos en cero.
-    Calendario del fondo: America/Guayaquil. El primer aporte corresponde al mes
-    más antiguo definido por el tesorero en contribution_periods, para todos los
-    usuarios, sin depender de users.created_at. Se permiten adelantos hasta diciembre.
-    Una sola transacción con aportes puede estar pendiente por usuario.
-    Los comprobantes se identifican globalmente por banco y número, sin usar la fecha.
-    Evidencia privada obligatoria: un archivo JPG, PNG o PDF de hasta 10 MB.
-    Bancos seleccionados de un catálogo administrado por el tesorero.
-    Una cuenta administrativa inicial se crea durante la instalación. Desde la
-    aplicación designa al único tesorero, conservando el historial de designaciones.
-    Préstamos con sistema francés, tasa mensual fija incluida tasa cero y plazo
-    en meses. Cuotas completas consecutivas; se pueden adelantar sin recalcular
-    intereses. Los atrasos no generan recargos. Vencimientos desde el desembolso.
-    Alcance vigente: aportes mensuales fijos no retirables y préstamos financiados
-    exclusivamente por el fondo. Todos los intereses cobrados permanecen en el fondo.
-    No existen cuentas de ahorros, retiros ni reparto de intereses entre usuarios.
-    Registrar una transacción crea un pendiente fuera del ledger. Solo la aprobación
-    del tesorero genera su asiento. El historial operativo conserva toda la trazabilidad.
-    Al registrar y aprobar, el monto debe coincidir exactamente con la suma de aportes
-    mensuales completos y pagos válidos de préstamos, sin sobrantes ni faltantes.
-    Los cambios propuestos viven en openspec/changes; las especificaciones consolidadas
-    viven en openspec/specs después de implementar, verificar y archivar el cambio.
-    El primer cambio implementa el modelo financiero acordado. El archivo tasks.md
-    indica qué recorridos están verificados y cuáles requieren más comprobaciones.
+  Aplicación web para un fondo familiar multipropósito.
+  Proyecto existente: PHP 8.5, Laravel 13, Vue 3 e Inertia 3.
+  Motor usado para implementar y probar: MySQL con InnoDB. La aplicación conecta
+  a family_found y la suite de pruebas usa family_found_testing por separado.
+  Documentación del producto en español, con encabezados estructurales de OpenSpec.
+  Moneda única USD. El sistema comienza con todos los saldos en cero.
+  Calendario del fondo: America/Guayaquil. El primer aporte corresponde al mes
+  más antiguo definido por el tesorero en contribution_periods, para todos los
+  usuarios, sin depender de users.created_at. Se permiten adelantos hasta diciembre.
+  Una sola transacción con aportes puede estar pendiente por usuario.
+  Los comprobantes se identifican globalmente por banco y número, sin usar la fecha.
+  Evidencia privada obligatoria: un archivo JPG, PNG o PDF de hasta 10 MB.
+  Bancos seleccionados de un catálogo administrado por el tesorero.
+  Una cuenta administrativa inicial se crea durante la instalación. Desde la
+  aplicación designa al único tesorero, conservando el historial de designaciones.
+  Préstamos con sistema francés, tasa mensual fija incluida tasa cero y plazo
+  en meses. Cuotas completas consecutivas; se pueden adelantar sin recalcular
+  intereses. Los atrasos no generan recargos. Vencimientos desde el desembolso.
+  Alcance vigente: aportes mensuales fijos no retirables y préstamos financiados
+  exclusivamente por el fondo. Todos los intereses cobrados permanecen en el fondo.
+  No existen cuentas de ahorros, retiros ni reparto de intereses entre usuarios.
+  Registrar una transacción crea un pendiente fuera del ledger. Solo la aprobación
+  del tesorero genera su asiento. El historial operativo conserva toda la trazabilidad.
+  Al registrar y aprobar, el monto debe coincidir exactamente con la suma de aportes
+  mensuales completos y pagos válidos de préstamos, sin sobrantes ni faltantes.
+  Los cambios propuestos viven en openspec/changes; las especificaciones consolidadas
+  viven en openspec/specs después de implementar, verificar y archivar el cambio.
+  El primer cambio implementa el modelo financiero acordado. El archivo tasks.md
+  indica qué recorridos están verificados y cuáles requieren más comprobaciones.
