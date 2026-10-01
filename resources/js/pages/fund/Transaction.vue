@@ -250,13 +250,17 @@ function reason(event: Event): string | null {
             </p>
           </div>
           <div class="flex w-full flex-col gap-2">
-            <Label for="rejection-reason">Motivo del rechazo (obligatorio)</Label>
+            <Label for="rejection-reason"
+              >Motivo del rechazo (obligatorio)</Label
+            >
             <AutoResizeTextarea
               id="rejection-reason"
               v-model="rejection.reason"
               required
               :aria-invalid="!!rejection.errors.reason"
-              :aria-describedby="rejection.errors.reason ? 'rejection-error' : undefined"
+              :aria-describedby="
+                rejection.errors.reason ? 'rejection-error' : undefined
+              "
               maxlength="5000"
             />
             <p
@@ -280,7 +284,10 @@ function reason(event: Event): string | null {
               type="button"
               variant="ghost"
               :disabled="rejection.processing"
-              @click="showingRejection = false; rejection.clearErrors()"
+              @click="
+                showingRejection = false;
+                rejection.clearErrors();
+              "
             >
               Cancelar
             </Button>

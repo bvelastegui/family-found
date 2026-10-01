@@ -130,7 +130,10 @@ defineProps<{
         >
       </FundStatCard>
     </div>
-    <div class="grid gap-4" :class="{ 'lg:grid-cols-2': upcomingInstallments.length > 0 }">
+    <div
+      class="grid gap-4"
+      :class="{ 'lg:grid-cols-2': upcomingInstallments.length > 0 }"
+    >
       <Card
         ><CardHeader
           ><CardTitle>Transferencias en revisión</CardTitle
@@ -195,8 +198,16 @@ defineProps<{
         ></Card
       >
     </div>
-    <p v-if="hasLoans && upcomingInstallments.length === 0" class="text-sm text-muted-foreground">
-      No tienes cuotas pendientes. <Link class="font-medium underline underline-offset-4" :href="loansIndex()">Consultar mis préstamos</Link>
+    <p
+      v-if="hasLoans && upcomingInstallments.length === 0"
+      class="text-sm text-muted-foreground"
+    >
+      No tienes cuotas pendientes.
+      <Link
+        class="font-medium underline underline-offset-4"
+        :href="loansIndex()"
+        >Consultar mis préstamos</Link
+      >
     </p>
   </main>
 </template>

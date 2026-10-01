@@ -17,9 +17,9 @@ const label = computed(
       reserved: 'Reservado',
       disbursed: 'Desembolsado',
       cancelled: 'Cancelado',
-            superseded: 'Sustituido',
-            locked: 'Fijada por una transacción',
-            unavailable: 'Mes no editable',
+      superseded: 'Sustituido',
+      locked: 'Fijada por una transacción',
+      unavailable: 'Mes no editable',
     })[props.status] ?? props.status,
 );
 const variant = computed(() =>

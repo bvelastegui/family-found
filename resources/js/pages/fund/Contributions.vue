@@ -53,7 +53,9 @@ const paidCount = computed(
 const configuredCount = computed(
   () => props.periods.filter((period) => period.id !== null).length,
 );
-const displayedPeriods = computed(() => props.periods.filter((period) => period.id !== null));
+const displayedPeriods = computed(() =>
+  props.periods.filter((period) => period.id !== null),
+);
 
 function changeYear(event: Event): void {
   const selectedYear = Number((event.target as HTMLSelectElement).value);
@@ -84,7 +86,7 @@ defineOptions({
         </p>
       </div>
       <Button as-child>
-          <Link :href="newTransaction()">Registrar aporte</Link>
+        <Link :href="newTransaction()">Registrar aporte</Link>
       </Button>
     </header>
 
@@ -95,7 +97,7 @@ defineOptions({
           <CardDescription>Cuotas aprobadas en todos los años</CardDescription>
         </CardHeader>
         <CardContent class="text-3xl font-semibold tabular-nums">
-            {{ usd(totalCents) }}
+          {{ usd(totalCents) }}
         </CardContent>
       </Card>
       <Card>
@@ -108,8 +110,8 @@ defineOptions({
             v-if="pendingTransactionId"
             class="font-medium underline underline-offset-4"
             :href="transactionShow(pendingTransactionId)"
-            >
-              Comprobante #{{ pendingTransactionId }} en revisión
+          >
+            Comprobante #{{ pendingTransactionId }} en revisión
           </Link>
           <p
             v-else
@@ -195,48 +197,62 @@ defineOptions({
           </Button>
         </nav>
       </div>
-      <p v-if="!hasConfiguredPeriods" class="text-muted-foreground">Todavía no hay cuotas configuradas. El tesorero define el primer período de aportes.</p>
-      <p v-else-if="displayedPeriods.length === 0" class="text-muted-foreground">No hay cuotas configuradas para {{ year }}. Puedes consultar otro año.</p>
-      <ol v-else class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-            <li
-              v-for="period in displayedPeriods"
-              :key="period.month"
-              class="flex min-h-36 items-start gap-3 rounded-lg border p-4"
+      <p
+        v-if="!hasConfiguredPeriods"
+        class="text-muted-foreground"
+      >
+        Todavía no hay cuotas configuradas. El tesorero define el primer período
+        de aportes.
+      </p>
+      <p
+        v-else-if="displayedPeriods.length === 0"
+        class="text-muted-foreground"
+      >
+        No hay cuotas configuradas para {{ year }}. Puedes consultar otro año.
+      </p>
+      <ol
+        v-else
+        class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4"
+      >
+        <li
+          v-for="period in displayedPeriods"
+          :key="period.month"
+          class="flex min-h-36 items-start gap-3 rounded-lg border p-4"
+        >
+          <component
+            :is="
+              period.status === 'paid'
+                ? CircleCheck
+                : period.status === 'pending'
+                  ? Clock3
+                  : CalendarDays
+            "
+            class="mt-0.5 size-5 shrink-0 text-muted-foreground"
+            aria-hidden="true"
+          />
+          <div class="min-w-0 flex-1">
+            <h3 class="font-medium capitalize">
+              {{ fundMonth(period.month) }}
+            </h3>
+            <p class="mt-1 text-sm text-muted-foreground">
+              {{ period.amount_cents !== null ? usd(period.amount_cents) : '' }}
+            </p>
+            <FundStatus
+              :status="period.status"
+              class="mt-2"
+            />
+            <p
+              v-if="period.transaction_id"
+              class="mt-2 text-sm"
             >
-              <component
-                :is="
-                  period.status === 'paid'
-                    ? CircleCheck
-                    : period.status === 'pending'
-                      ? Clock3
-                      : CalendarDays
-                "
-                class="mt-0.5 size-5 shrink-0 text-muted-foreground"
-                aria-hidden="true"
-              />
-              <div class="min-w-0 flex-1">
-                <h3 class="font-medium capitalize">
-                  {{ fundMonth(period.month) }}
-                </h3>
-                <p class="mt-1 text-sm text-muted-foreground">
-                  {{ period.amount_cents !== null ? usd(period.amount_cents) : '' }}
-                </p>
-                <FundStatus
-                  :status="period.status"
-                  class="mt-2"
-                />
-                <p
-                  v-if="period.transaction_id"
-                  class="mt-2 text-sm"
-                >
-                  <Link
-                    :href="transactionShow(period.transaction_id)"
-                    class="underline underline-offset-4"
-                    >Ver comprobante</Link
-                  >
-                </p>
-              </div>
-            </li>
+              <Link
+                :href="transactionShow(period.transaction_id)"
+                class="underline underline-offset-4"
+                >Ver comprobante</Link
+              >
+            </p>
+          </div>
+        </li>
       </ol>
     </section>
   </main>
