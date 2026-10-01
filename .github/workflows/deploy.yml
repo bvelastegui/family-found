@@ -80,6 +80,7 @@ jobs:
       - name: Check server requirements
         env:
           DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_ENV: ${{ secrets.DEPLOY_ENV }}
           DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
           DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
           DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
@@ -90,19 +91,24 @@ jobs:
             -o BatchMode=yes \
             -o StrictHostKeyChecking=yes \
             "$DEPLOY_USER@$DEPLOY_HOST" \
-            bash -s -- "$DEPLOY_PATH" <<'REMOTE_SCRIPT'
+            bash -s -- "$DEPLOY_PATH" "${DEPLOY_ENV:+available}" <<'REMOTE_SCRIPT'
           set -Eeuo pipefail
           deploy_path="$1"
 
-          test -d "$deploy_path"
+          if [[ ! -f "$deploy_path/.env" && -z "$2" ]]; then
+            echo 'Missing DEPLOY_ENV secret for initial deployment' >&2
+            exit 1
+          fi
+
+          mkdir -p "$deploy_path"
           test -w "$deploy_path"
-          test -f "$deploy_path/.env"
           command -v composer >/dev/null
           command -v php8.5 >/dev/null
           command -v rsync >/dev/null
           REMOTE_SCRIPT
 
       - name: Enable maintenance mode
+        id: maintenance
         env:
           DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
           DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
@@ -116,8 +122,25 @@ jobs:
             bash -s -- "$DEPLOY_PATH" <<'REMOTE_SCRIPT'
           set -Eeuo pipefail
           cd "$1"
-          php8.5 artisan down --retry=60
+          if [[ -f artisan ]]; then
+            php8.5 artisan down --retry=60
+          fi
           REMOTE_SCRIPT
+          echo 'ready=true' >> "$GITHUB_OUTPUT"
+
+      - name: Initialize environment on first deployment
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_ENV: ${{ secrets.DEPLOY_ENV }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+        run: |
+          printf '%s\n' "$DEPLOY_ENV" | ssh -i "$HOME/.ssh/deploy_key" -p "$DEPLOY_PORT" \
+            -o BatchMode=yes \
+            -o StrictHostKeyChecking=yes \
+            "$DEPLOY_USER@$DEPLOY_HOST" \
+            "umask 077; if test ! -f '$DEPLOY_PATH/.env'; then cat > '$DEPLOY_PATH/.env'; fi"
 
       - name: Synchronize application
         env:
@@ -157,7 +180,9 @@ jobs:
           set -Eeuo pipefail
           cd "$1"
 
-          php8.5 composer.phar install \
+          mkdir -p bootstrap/cache storage/app/public storage/framework/cache/data storage/framework/sessions storage/framework/views storage/logs
+
+          composer install \
             --no-dev \
             --no-interaction \
             --no-progress \
@@ -169,7 +194,7 @@ jobs:
           REMOTE_SCRIPT
 
       - name: Disable maintenance mode
-        if: always() && steps.ssh.outputs.configured == 'true'
+        if: always() && steps.maintenance.outputs.ready == 'true'
         env:
           DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
           DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
