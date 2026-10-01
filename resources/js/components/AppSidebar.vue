@@ -12,7 +12,6 @@ import {
   Galaxy,
 } from '@lucide/vue';
 import { computed } from 'vue';
-import AppLogo from '@/components/AppLogo.vue';
 import NavMain from '@/components/NavMain.vue';
 import NavUser from '@/components/NavUser.vue';
 import {
