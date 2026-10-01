@@ -8,5 +8,13 @@
   "Are you sure you want to delete your account?": "¿Seguro que quieres eliminar tu cuenta?",
   "Once your account is deleted, all of its resources and data will also be permanently deleted. Please enter your password to confirm you would like to permanently delete your account.": "Al eliminar tu cuenta, también se borrarán permanentemente todos tus datos. Escribe tu contraseña para confirmar la eliminación.",
   "Password": "Contraseña",
-  "Cancel": "Cancelar"
+  "Cancel": "Cancelar",
+  "Reset your password": "Restablece tu contraseña",
+  "You are receiving this email because we received a password reset request for your account.": "Recibimos una solicitud para restablecer la contraseña de tu cuenta.",
+  "Reset Password": "Restablecer contraseña",
+  "This password reset link will expire in :count minutes.": "Este enlace para restablecer tu contraseña vencerá en :count minutos.",
+  "If you did not request a password reset, no further action is required.": "Si no solicitaste restablecer tu contraseña, no necesitas hacer nada.",
+  "Regards,": "Saludos,",
+  "All rights reserved.": "Todos los derechos reservados.",
+  "If you're having trouble clicking the \":actionText\" button, copy and paste the URL below\ninto your web browser:": "Si tienes problemas para hacer clic en el botón «:actionText», copia y pega la siguiente URL en tu navegador:"
 }

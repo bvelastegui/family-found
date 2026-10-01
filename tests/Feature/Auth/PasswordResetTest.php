@@ -25,6 +25,22 @@ test('reset password link can be requested', function () {
     Notification::assertSentTo($user, ResetPassword::class);
 });
 
+test('password reset email is rendered in Spanish', function () {
+    config(['auth.passwords.users.expire' => 60]);
+    $mail = (new ResetPassword('token-de-prueba'))->toMail(User::factory()->make());
+    $rendered = $mail->render();
+    $introLines = implode(' ', $mail->introLines);
+
+    expect($mail->subject)->toBe('Restablece tu contraseña')
+        ->and(str_contains($introLines, 'Recibimos una solicitud para restablecer la contraseña de tu cuenta.'))->toBeTrue()
+        ->and(str_contains($rendered, 'Restablecer contraseña'))->toBeTrue()
+        ->and(str_contains($rendered, 'Saludos,'))->toBeTrue()
+        ->and(str_contains($rendered, 'Todos los derechos reservados.'))->toBeTrue()
+        ->and(str_contains($rendered, 'Reset your password'))->toBeFalse()
+        ->and(str_contains($rendered, 'Reset Password'))->toBeFalse()
+        ->and(str_contains($rendered, 'Regards,'))->toBeFalse();
+});
+
 test('reset password screen can be rendered', function () {
     Notification::fake();
 

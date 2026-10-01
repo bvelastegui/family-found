@@ -28,6 +28,20 @@ test('only the treasurer can manage participants and send invitations', function
     ])->assertSessionHasErrors('email');
 });
 
+test('invitation email renders its entire content in Spanish', function () {
+    $notification = new FundInvitationNotification('https://familia.test/invitations/1?signature=test');
+    $mail = $notification->toMail((object) []);
+    $rendered = $mail->render();
+
+    expect($mail->subject)->toBe('Invitación al Fondo Familiar')
+        ->and(str_contains($rendered, 'Saludos,'))->toBeTrue()
+        ->and(str_contains($rendered, 'Todos los derechos reservados.'))->toBeTrue()
+        ->and(str_contains($rendered, 'Si tienes problemas para hacer clic en el botón'))->toBeTrue()
+        ->and(str_contains($rendered, 'Regards,'))->toBeFalse()
+        ->and(str_contains($rendered, 'All rights reserved.'))->toBeFalse()
+        ->and(str_contains($rendered, "If you're having trouble clicking"))->toBeFalse();
+});
+
 test('a signed invitation can be accepted once and expires after seven days', function () {
     Notification::fake();
     [$treasurer] = prepareFund();
