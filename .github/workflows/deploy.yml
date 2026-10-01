@@ -14,7 +14,7 @@ concurrency:
 
 jobs:
   deploy:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     timeout-minutes: 20
     environment: production
 
@@ -28,15 +28,10 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
-          node-version: '22'
+          node-version: '26'
 
       - name: Enable pnpm
         run: corepack enable pnpm
-
-      - name: Build production assets
-        run: |
-          pnpm install --frozen-lockfile
-          pnpm run build
 
       - name: Configure SSH
         id: ssh
@@ -76,6 +71,20 @@ jobs:
           printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > "$HOME/.ssh/known_hosts"
           chmod 600 "$HOME/.ssh/deploy_key" "$HOME/.ssh/known_hosts"
           echo 'configured=true' >> "$GITHUB_OUTPUT"
+
+      - name: Prepare application dependencies
+        run: |
+          composer install \
+            --no-dev \
+            --no-interaction \
+            --no-progress \
+            --optimize-autoloader \
+            --prefer-dist
+
+      - name: Build production assets
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm run build
 
       - name: Check server requirements
         env:
@@ -182,12 +191,6 @@ jobs:
 
           mkdir -p bootstrap/cache storage/app/public storage/framework/cache/data storage/framework/sessions storage/framework/views storage/logs
 
-          composer install \
-            --no-dev \
-            --no-interaction \
-            --no-progress \
-            --optimize-autoloader \
-            --prefer-dist
           php8.5 artisan migrate --force
           php8.5 artisan optimize
           php8.5 artisan reload
