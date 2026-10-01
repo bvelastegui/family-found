@@ -2,12 +2,19 @@
 
 namespace App\Notifications;
 
+use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
-class FundInvitationNotification extends Notification
+class FundInvitationNotification extends Notification implements ShouldQueue
 {
-    public function __construct(public string $invitationUrl) {}
+    use Queueable;
+
+    public function __construct(public string $invitationUrl)
+    {
+        $this->onConnection('redis');
+    }
 
     /**
      * Get the notification's delivery channels.
