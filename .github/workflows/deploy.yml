@@ -1,0 +1,206 @@
+name: deploy
+
+on:
+  release:
+    types:
+      - published
+
+permissions:
+  contents: read
+
+concurrency:
+  group: production-deployment
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: production
+
+    steps:
+      - name: Checkout release revision
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          ref: ${{ github.event.release.tag_name }}
+
+      - name: Setup Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '22'
+
+      - name: Enable pnpm
+        run: corepack enable pnpm
+
+      - name: Build production assets
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm run build
+
+      - name: Configure SSH
+        id: ssh
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+        run: |
+          set -Eeuo pipefail
+
+          required_secrets=(
+            DEPLOY_HOST
+            DEPLOY_KNOWN_HOSTS
+            DEPLOY_PATH
+            DEPLOY_PORT
+            DEPLOY_SSH_KEY
+            DEPLOY_USER
+          )
+
+          for secret_name in "${required_secrets[@]}"; do
+            if [[ -z "${!secret_name}" ]]; then
+              echo "Missing required GitHub secret: ${secret_name}" >&2
+              exit 1
+            fi
+          done
+
+          [[ "$DEPLOY_HOST" =~ ^[a-zA-Z0-9.:-]+$ ]]
+          [[ "$DEPLOY_USER" =~ ^[a-zA-Z0-9._-]+$ ]]
+          [[ "$DEPLOY_PORT" =~ ^[0-9]+$ ]]
+          [[ "$DEPLOY_PATH" =~ ^/[a-zA-Z0-9._/-]+$ ]]
+
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$DEPLOY_SSH_KEY" > "$HOME/.ssh/deploy_key"
+          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > "$HOME/.ssh/known_hosts"
+          chmod 600 "$HOME/.ssh/deploy_key" "$HOME/.ssh/known_hosts"
+          echo 'configured=true' >> "$GITHUB_OUTPUT"
+
+      - name: Check server requirements
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+        run: |
+          set -Eeuo pipefail
+
+          ssh -i "$HOME/.ssh/deploy_key" -p "$DEPLOY_PORT" \
+            -o BatchMode=yes \
+            -o StrictHostKeyChecking=yes \
+            "$DEPLOY_USER@$DEPLOY_HOST" \
+            bash -s -- "$DEPLOY_PATH" <<'REMOTE_SCRIPT'
+          set -Eeuo pipefail
+          deploy_path="$1"
+
+          test -d "$deploy_path"
+          test -w "$deploy_path"
+          test -f "$deploy_path/.env"
+          command -v composer >/dev/null
+          command -v php8.5 >/dev/null
+          command -v rsync >/dev/null
+          REMOTE_SCRIPT
+
+      - name: Enable maintenance mode
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+        run: |
+          ssh -i "$HOME/.ssh/deploy_key" -p "$DEPLOY_PORT" \
+            -o BatchMode=yes \
+            -o StrictHostKeyChecking=yes \
+            "$DEPLOY_USER@$DEPLOY_HOST" \
+            bash -s -- "$DEPLOY_PATH" <<'REMOTE_SCRIPT'
+          set -Eeuo pipefail
+          cd "$1"
+          php8.5 artisan down --retry=60
+          REMOTE_SCRIPT
+
+      - name: Synchronize application
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+        run: |
+          rsync -az --delete-delay \
+            --exclude='/.env' \
+            --exclude='/.git/' \
+            --exclude='/.github/' \
+            --exclude='/bootstrap/cache/' \
+            --exclude='/e2e/' \
+            --exclude='/node_modules/' \
+            --exclude='/public/hot' \
+            --exclude='/public/storage' \
+            --exclude='/storage/' \
+            --exclude='/tests/' \
+            --exclude='/vendor/' \
+            --exclude='/composer.phar' \
+            -e "ssh -i $HOME/.ssh/deploy_key -p $DEPLOY_PORT -o BatchMode=yes -o StrictHostKeyChecking=yes" \
+            ./ "$DEPLOY_USER@$DEPLOY_HOST:$DEPLOY_PATH/"
+
+      - name: Finish deployment
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+        run: |
+          ssh -i "$HOME/.ssh/deploy_key" -p "$DEPLOY_PORT" \
+            -o BatchMode=yes \
+            -o StrictHostKeyChecking=yes \
+            "$DEPLOY_USER@$DEPLOY_HOST" \
+            bash -s -- "$DEPLOY_PATH" <<'REMOTE_SCRIPT'
+          set -Eeuo pipefail
+          cd "$1"
+
+          php8.5 composer.phar install \
+            --no-dev \
+            --no-interaction \
+            --no-progress \
+            --optimize-autoloader \
+            --prefer-dist
+          php8.5 artisan migrate --force
+          php8.5 artisan optimize
+          php8.5 artisan reload
+          REMOTE_SCRIPT
+
+      - name: Disable maintenance mode
+        if: always() && steps.ssh.outputs.configured == 'true'
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+        run: |
+          ssh -i "$HOME/.ssh/deploy_key" -p "$DEPLOY_PORT" \
+            -o BatchMode=yes \
+            -o StrictHostKeyChecking=yes \
+            "$DEPLOY_USER@$DEPLOY_HOST" \
+            bash -s -- "$DEPLOY_PATH" <<'REMOTE_SCRIPT'
+          set -Eeuo pipefail
+          cd "$1"
+          php8.5 artisan up
+          REMOTE_SCRIPT
+
+      - name: Check application health
+        env:
+          DEPLOY_URL: ${{ secrets.DEPLOY_URL }}
+        run: |
+          if [[ -z "$DEPLOY_URL" ]]; then
+            exit 0
+          fi
+
+          curl --fail \
+            --max-time 15 \
+            --retry 5 \
+            --retry-all-errors \
+            --retry-delay 5 \
+            "${DEPLOY_URL%/}/up"
+
+      - name: Remove SSH key
+        if: always()
+        run: rm -f "$HOME/.ssh/deploy_key"
