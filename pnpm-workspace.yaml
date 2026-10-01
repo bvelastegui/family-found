@@ -6,3 +6,6 @@ publicHoistPattern:
 
 allowBuilds:
   vue-demi: true
+
+overrides:
+  decode-uri-component@<=0.4.2: ^0.5.0

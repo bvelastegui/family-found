@@ -4,6 +4,9 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
+overrides:
+  decode-uri-component@<=0.4.2: ^0.5.0
+
 importers:
 
   .:
@@ -15,7 +18,7 @@ importers:
         specifier: ^3.0.0
         version: 3.7.1(vue@3.5.43(typescript@5.9.3))
       '@lucide/vue':
-        specifier: ^1.17.0
+        specifier: ^1.48.0
         version: 1.48.0(vue@3.5.43(typescript@5.9.3))
       '@vueuse/core':
         specifier: ^12.8.2
@@ -30,16 +33,16 @@ importers:
         specifier: ^3.0.0
         version: 3.2.0(vite@8.3.1(@types/node@22.20.4)(jiti@2.7.0)(stylus@0.57.0(supports-color@10.2.2)))
       reka-ui:
-        specifier: ^2.9.8
+        specifier: ^2.10.5
         version: 2.10.5(vue@3.5.43(typescript@5.9.3))
       tailwind-merge:
-        specifier: ^3.2.0
+        specifier: ^3.7.0
         version: 3.7.0
       tailwindcss:
         specifier: ^4.1.1
         version: 4.3.3
       tw-animate-css:
-        specifier: ^1.2.5
+        specifier: ^1.4.0
         version: 1.4.0
       vue:
         specifier: ^3.5.13
@@ -1650,9 +1653,9 @@ packages:
       supports-color:
         optional: true
 
-  decode-uri-component@0.2.2:
-    resolution: {integrity: sha512-FqUYQ+8o158GyGTrMFJms9qh3CqTKvAqgqsTnkLI8sKu0028orqBhxNMFkFen0zGyg6epACD32pjVk58ngIErQ==}
-    engines: {node: '>=0.10'}
+  decode-uri-component@0.5.0:
+    resolution: {integrity: sha512-1BiQVoK8C9gUbQU6NzAtO/tkz2qOFpEObMWpcFvhx4fYnj4Oc5yzaJN/LD36ihkVUdXyh5ZekzX+yM+ty/SrPg==}
+    engines: {node: '>=14.16'}
 
   dedent@1.7.2:
     resolution: {integrity: sha512-WzMx3mW98SN+zn3hgemf4OzdmyNhhhKz5Ay0pUfQiMQ3e1g+xmTJWp/pKdwKVXhdSkAEGIIzqeuWrL3mV/AXbA==}
@@ -4769,7 +4772,7 @@ snapshots:
     optionalDependencies:
       supports-color: 10.2.2
 
-  decode-uri-component@0.2.2: {}
+  decode-uri-component@0.5.0: {}
 
   dedent@1.7.2: {}
 
@@ -6100,7 +6103,7 @@ snapshots:
   source-map-resolve@0.6.0:
     dependencies:
       atob: 2.1.2
-      decode-uri-component: 0.2.2
+      decode-uri-component: 0.5.0
 
   source-map@0.6.1: {}
 

@@ -71,7 +71,7 @@ const treasuryNavItems = computed<NavItem[]>(() => {
       title: 'Resumen',
       href: treasuryIndex(),
       icon: ClipboardCheck,
-      isActive: url.startsWith(treasuryIndex().url),
+      isActive: url === treasuryIndex().url,
     },
     {
       title: 'Préstamos',
