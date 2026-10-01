@@ -2,8 +2,10 @@
 import { Head, Link } from '@inertiajs/vue3';
 import { dashboard } from '@/routes';
 import { index as loansIndex, show as showLoan } from '@/routes/fund/loans';
+import { create as createLoan } from '@/routes/fund/treasury/loans';
 import FundPagination from '@/components/FundPagination.vue';
 import FundStatus from '@/components/FundStatus.vue';
+import { Button } from '@/components/ui/button';
 import {
   Card,
   CardContent,
@@ -36,12 +38,20 @@ defineOptions({
 <template>
   <main class="mx-auto flex w-full max-w-6xl flex-col gap-6 p-4 md:p-8">
     <Head title="Préstamos" />
-    <header>
-      <p class="text-sm text-muted-foreground">Capital del fondo</p>
-      <h1 class="text-3xl font-semibold tracking-tight">Préstamos</h1>
-      <p class="mt-1 text-muted-foreground">
-        Consulta sus condiciones, saldo pendiente y tabla de amortización.
-      </p>
+    <header class="flex flex-wrap items-start justify-between gap-4">
+      <div>
+        <p class="text-sm text-muted-foreground">Capital del fondo</p>
+        <h1 class="text-3xl font-semibold tracking-tight">Préstamos</h1>
+        <p class="mt-1 text-muted-foreground">
+          Consulta sus condiciones, saldo pendiente y tabla de amortización.
+        </p>
+      </div>
+      <Button
+        v-if="isTreasurer"
+        as-child
+      >
+        <Link :href="createLoan()">Reservar nuevo préstamo</Link>
+      </Button>
     </header>
     <Card>
       <CardHeader>

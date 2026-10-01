@@ -53,6 +53,7 @@ const paidCount = computed(
 const configuredCount = computed(
   () => props.periods.filter((period) => period.id !== null).length,
 );
+const displayedPeriods = computed(() => props.periods.filter((period) => period.id !== null));
 
 function changeYear(event: Event): void {
   const selectedYear = Number((event.target as HTMLSelectElement).value);
@@ -194,23 +195,13 @@ defineOptions({
           </Button>
         </nav>
       </div>
-      <Card>
-        <CardContent class="pt-6">
-          <p
-            v-if="!hasConfiguredPeriods"
-            class="text-muted-foreground"
-          >
-            Todavía no hay cuotas configuradas. El tesorero define el primer
-            período de aportes.
-          </p>
-          <ol class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+      <p v-if="!hasConfiguredPeriods" class="text-muted-foreground">Todavía no hay cuotas configuradas. El tesorero define el primer período de aportes.</p>
+      <p v-else-if="displayedPeriods.length === 0" class="text-muted-foreground">No hay cuotas configuradas para {{ year }}. Puedes consultar otro año.</p>
+      <ol v-else class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
             <li
-              v-for="period in periods"
+              v-for="period in displayedPeriods"
               :key="period.month"
               class="flex min-h-36 items-start gap-3 rounded-lg border p-4"
-              :class="{
-                'border-dashed bg-muted/20': period.id === null,
-              }"
             >
               <component
                 :is="
@@ -228,13 +219,7 @@ defineOptions({
                   {{ fundMonth(period.month) }}
                 </h3>
                 <p class="mt-1 text-sm text-muted-foreground">
-                  {{
-                    period.amount_cents !== null
-                      ? usd(period.amount_cents)
-                      : period.status === 'before_start'
-                        ? 'El fondo aún no iniciaba'
-                        : 'Cuota por definir'
-                  }}
+                  {{ period.amount_cents !== null ? usd(period.amount_cents) : '' }}
                 </p>
                 <FundStatus
                   :status="period.status"
@@ -252,9 +237,7 @@ defineOptions({
                 </p>
               </div>
             </li>
-          </ol>
-        </CardContent>
-      </Card>
+      </ol>
     </section>
   </main>
 </template>

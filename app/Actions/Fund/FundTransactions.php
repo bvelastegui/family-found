@@ -28,6 +28,7 @@ class FundTransactions
         private WriteJournalEntry $journal,
         private RecordFundEvent $events,
         private FundBalances $balances,
+        private NotifyFundTransaction $notifications,
     ) {}
 
     /** @param TransactionData $data */
@@ -47,6 +48,7 @@ class FundTransactions
             abort_unless($transaction->status === TransactionStatus::Pending || $transaction->status === TransactionStatus::Approved, 409, 'Un registro rechazado no puede aprobarse.');
             if ($transaction->status === TransactionStatus::Pending) {
                 $this->post($actor, $transaction);
+                $this->notifications->approved($transaction);
             }
 
             return $transactionId;
@@ -64,6 +66,7 @@ class FundTransactions
             abort_unless($transaction->status === TransactionStatus::Pending, 409, 'Solo se puede rechazar un registro pendiente.');
             $transaction->update(['status' => TransactionStatus::Rejected, 'active_reference' => null, 'pending_contributor_id' => null]);
             $this->events->handle($actor, 'transaction.rejected', 'transaction', $transactionId, ['reason' => $reason]);
+            $this->notifications->rejected($transaction);
 
             return $transactionId;
         }, 'treasurer');
@@ -154,6 +157,9 @@ class FundTransactions
         }
         ContributionPeriod::query()->whereIn('id', $data['period_ids'])->whereNull('locked_at')->update(['locked_at' => now()]);
         $this->events->handle($actor, 'transaction.registered', 'transaction', $transaction->id, ['user_id' => $owner->id, 'amount_cents' => $amount, 'evidence_id' => $file->id, 'corrected_from_id' => $transaction->corrected_from_id]);
+        if ($correctedId === null) {
+            $this->notifications->registered($transaction);
+        }
 
         return $transaction;
     }

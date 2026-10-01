@@ -31,7 +31,7 @@ import { index as loansIndex } from '@/routes/fund/loans';
 import { index as treasuryIndex } from '@/routes/fund/treasury';
 import { index as periodsIndex } from '@/routes/fund/contribution-periods';
 import { index as banksIndex } from '@/routes/fund/banks';
-import { edit as treasurerEdit } from '@/routes/administration/treasurer';
+import { index as participantsIndex } from '@/routes/fund/treasury/participants';
 import type { NavItem } from '@/types';
 
 const page = usePage();
@@ -62,12 +62,6 @@ const mainNavItems = computed<NavItem[]>(() => {
       icon: ReceiptText,
       isActive: url.startsWith(transactionsIndex().url),
     },
-    {
-      title: 'Préstamos',
-      href: loansIndex(),
-      icon: Wallet,
-      isActive: url.startsWith(loansIndex().url),
-    },
   ];
 });
 const treasuryNavItems = computed<NavItem[]>(() => {
@@ -81,6 +75,12 @@ const treasuryNavItems = computed<NavItem[]>(() => {
       isActive: url.startsWith(treasuryIndex().url),
     },
     {
+      title: 'Préstamos',
+      href: loansIndex(),
+      icon: Wallet,
+      isActive: url.startsWith(loansIndex().url),
+    },
+    {
       title: 'Cuotas',
       href: periodsIndex(),
       icon: Settings2,
@@ -92,16 +92,14 @@ const treasuryNavItems = computed<NavItem[]>(() => {
       icon: Landmark,
       isActive: url.startsWith(banksIndex().url),
     },
+    {
+      title: 'Participantes',
+      href: participantsIndex(),
+      icon: UsersRound,
+      isActive: url.startsWith(participantsIndex().url),
+    },
   ];
 });
-const administrationNavItems = computed<NavItem[]>(() => [
-  {
-    title: 'Designar tesorero',
-    href: treasurerEdit(),
-    icon: UsersRound,
-    isActive: page.url.split('?')[0].startsWith(treasurerEdit().url),
-  },
-]);
 const name = usePage().props.name;
 </script>
 
@@ -135,11 +133,6 @@ const name = usePage().props.name;
         v-if="roles?.treasurer"
         label="Tesorería"
         :items="treasuryNavItems"
-      />
-      <NavMain
-        v-if="roles?.administrator"
-        label="Administración"
-        :items="administrationNavItems"
       />
     </SidebarContent>
 

@@ -11,14 +11,14 @@ El tesorero SHALL disponer de una pantalla propia que muestre primero las transa
 
 ### Requirement: Ajustes de tesorería separados
 
-El tesorero SHALL disponer de pantallas propias para períodos de aporte y catálogo de bancos. El administrador SHALL disponer de la designación del tesorero, sin obtener acceso a Tesorería salvo que ostente ese rol.
+El tesorero SHALL disponer de pantallas propias para períodos de aporte y catálogo de bancos. SHALL poder configurar de una vez entre uno y 120 meses consecutivos y modificar una cuota futura aún no utilizada; si un mes del rango no admite edición, SHALL revertirse todo el rango. La designación del tesorero SHALL estar disponible exclusivamente mediante el comando `fund:assign-treasurer`, sin acceso web.
 
-Las entradas Cuotas y Bancos SHALL estar en el grupo Tesorería del menú. La pantalla de resumen SHALL centrarse en conciliación, reservas y saldos, sin enlaces secundarios redundantes a esos ajustes.
+Las entradas Cuotas y Bancos SHALL estar en el grupo Tesorería del menú. La pantalla de resumen SHALL centrarse en conciliación y saldos, sin enlaces secundarios redundantes a esos ajustes. La reserva de préstamos SHALL estar disponible desde Resumen y Préstamos. La pantalla Bancos SHALL omitir un enlace redundante a Cuotas.
 
 #### Scenario: Administrador sin tesorería
 
-- **WHEN** un administrador sin permiso de tesorero abre Administración
-- **THEN** puede designar tesorero, pero no consultar saldos ni conciliar transacciones de otros usuarios.
+- **WHEN** un administrador sin permiso de tesorero intenta acceder a Tesorería
+- **THEN** no puede consultar saldos ni conciliar transacciones de otros usuarios; la designación se realiza por consola.
 
 ### Requirement: Corrección comprensible
 

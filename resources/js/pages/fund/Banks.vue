@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Head, Link, useForm } from '@inertiajs/vue3';
+import { Head, useForm } from '@inertiajs/vue3';
 import { dashboard } from '@/routes';
 import { index as treasuryIndex } from '@/routes/fund/treasury';
 import {
@@ -146,10 +146,6 @@ function toggleBank(item: Bank): void {
       :links="banks.links"
       :last-page="banks.last_page"
       label="Páginas del catálogo de bancos"
-    /><Link
-      :href="treasuryIndex()"
-      class="text-sm underline underline-offset-4"
-      >Volver a Tesorería</Link
-    >
+    />
   </main>
 </template>

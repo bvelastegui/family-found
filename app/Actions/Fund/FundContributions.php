@@ -23,22 +23,51 @@ class FundContributions
         $cents = Money::cents($amount);
 
         return $this->operations->handle($actor, 'contribution.configure', $key, compact('month', 'amount'), function () use ($actor, $date, $cents): int {
-            $period = ContributionPeriod::query()->where('month', $date->toDateString())->first();
-            if ($period !== null && ($period->locked_at !== null || $date->lessThanOrEqualTo(CarbonImmutable::now('America/Guayaquil')->startOfMonth()))) {
-                throw ValidationException::withMessages(['month' => 'Solo puedes modificar meses futuros que aún no se hayan utilizado.']);
-            }
-            $firstConfigured = ContributionPeriod::query()->orderBy('month')->first();
-            if ($period === null && $firstConfigured !== null && $date->lessThan($firstConfigured->month) && ContributionPeriod::query()->whereNotNull('locked_at')->exists()) {
-                throw ValidationException::withMessages(['month' => 'No puedes adelantar el primer período después de registrar aportes.']);
-            }
-            $previous = $period?->amount_cents;
-            $period ??= new ContributionPeriod(['month' => $date->toDateString()]);
-            $period->amount_cents = $cents;
-            $period->save();
-            $this->events->handle($actor, 'contribution.configured', 'period', $period->id, ['previous_cents' => $previous, 'amount_cents' => $cents, 'month' => $date->format('Y-m')]);
-
-            return $period->id;
+            return $this->configurePeriod($actor, $date, $cents)->id;
         }, 'treasurer');
+    }
+
+    public function setRange(User $actor, string $key, string $firstMonth, string $lastMonth, string $amount): int
+    {
+        $start = CarbonImmutable::createFromFormat('!Y-m', $firstMonth, 'America/Guayaquil');
+        $end = CarbonImmutable::createFromFormat('!Y-m', $lastMonth, 'America/Guayaquil');
+        $months = ($end->year - $start->year) * 12 + $end->month - $start->month + 1;
+        if ($months < 1 || $months > 120) {
+            throw ValidationException::withMessages(['last_month' => 'Selecciona un rango de entre uno y 120 meses consecutivos.']);
+        }
+        $cents = Money::cents($amount);
+
+        return $this->operations->handle($actor, 'contribution.configure-range', $key, compact('firstMonth', 'lastMonth', 'amount'), function () use ($actor, $start, $months, $cents): int {
+            for ($offset = 0; $offset < $months; $offset++) {
+                $month = $start->addMonths($offset);
+                try {
+                    $this->configurePeriod($actor, $month, $cents);
+                } catch (ValidationException $exception) {
+                    throw ValidationException::withMessages(['first_month' => $month->format('Y-m').': '.($exception->errors()['month'][0] ?? 'No se pudo configurar esta cuota.')]);
+                }
+            }
+
+            return $months;
+        }, 'treasurer');
+    }
+
+    private function configurePeriod(User $actor, CarbonImmutable $date, int $cents): ContributionPeriod
+    {
+        $period = ContributionPeriod::query()->where('month', $date->toDateString())->first();
+        if ($period !== null && ($period->locked_at !== null || $date->lessThanOrEqualTo(CarbonImmutable::now('America/Guayaquil')->startOfMonth()))) {
+            throw ValidationException::withMessages(['month' => 'Solo puedes modificar meses futuros que aún no se hayan utilizado.']);
+        }
+        $firstConfigured = ContributionPeriod::query()->orderBy('month')->first();
+        if ($period === null && $firstConfigured !== null && $date->lessThan($firstConfigured->month) && ContributionPeriod::query()->whereNotNull('locked_at')->exists()) {
+            throw ValidationException::withMessages(['month' => 'No puedes adelantar el primer período después de registrar aportes.']);
+        }
+        $previous = $period?->amount_cents;
+        $period ??= new ContributionPeriod(['month' => $date->toDateString()]);
+        $period->amount_cents = $cents;
+        $period->save();
+        $this->events->handle($actor, 'contribution.configured', 'period', $period->id, ['previous_cents' => $previous, 'amount_cents' => $cents, 'month' => $date->format('Y-m')]);
+
+        return $period;
     }
 
     /**

@@ -1,6 +1,11 @@
 <script setup lang="ts">
+import { Link, usePage } from '@inertiajs/vue3';
+import { Bell } from '@lucide/vue';
+import { computed } from 'vue';
 import Breadcrumbs from '@/components/Breadcrumbs.vue';
+import { Button } from '@/components/ui/button';
 import { SidebarTrigger } from '@/components/ui/sidebar';
+import { index as notificationsIndex } from '@/routes/fund/notifications';
 import type { BreadcrumbItem } from '@/types';
 
 withDefaults(
@@ -10,6 +15,10 @@ withDefaults(
   {
     breadcrumbs: () => [],
   },
+);
+const page = usePage();
+const unreadCount = computed(() =>
+  Number(page.props.unreadNotificationsCount ?? 0),
 );
 </script>
 
@@ -23,5 +32,24 @@ withDefaults(
         <Breadcrumbs :breadcrumbs="breadcrumbs" />
       </template>
     </div>
+    <Button
+      variant="ghost"
+      size="icon"
+      class="relative ml-auto"
+      as-child
+    >
+      <Link
+        :href="notificationsIndex()"
+        :aria-label="`Notificaciones: ${unreadCount} sin leer`"
+      >
+        <Bell />
+        <span
+          v-if="unreadCount"
+          class="absolute -top-1 -right-1 flex min-w-5 items-center justify-center rounded-full bg-primary px-1 text-xs text-primary-foreground"
+          aria-hidden="true"
+          >{{ unreadCount > 9 ? '9+' : unreadCount }}</span
+        >
+      </Link>
+    </Button>
   </header>
 </template>

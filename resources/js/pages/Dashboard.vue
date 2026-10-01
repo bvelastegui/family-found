@@ -40,6 +40,7 @@ defineProps<{
     due_on: string;
     amount_cents: number;
   }[];
+  hasLoans: boolean;
   pendingReviewCount: number;
   balances: {
     cash: number;
@@ -129,7 +130,7 @@ defineProps<{
         >
       </FundStatCard>
     </div>
-    <div class="grid gap-4 lg:grid-cols-2">
+    <div class="grid gap-4" :class="{ 'lg:grid-cols-2': upcomingInstallments.length > 0 }">
       <Card
         ><CardHeader
           ><CardTitle>Transferencias en revisión</CardTitle
@@ -163,23 +164,14 @@ defineProps<{
             </li>
           </ul></CardContent
         ></Card
-      ><Card
+      ><Card v-if="upcomingInstallments.length > 0"
         ><CardHeader
           ><CardTitle>Próximas cuotas de préstamo</CardTitle
           ><CardDescription
             >Cuotas pendientes ordenadas por vencimiento</CardDescription
           ></CardHeader
         ><CardContent
-          ><p
-            v-if="!upcomingInstallments.length"
-            class="text-sm text-muted-foreground"
-          >
-            No tienes cuotas pendientes.
-          </p>
-          <ul
-            v-else
-            class="divide-y"
-          >
+          ><ul class="divide-y">
             <li
               v-for="item in upcomingInstallments"
               :key="item.id"
@@ -198,10 +190,13 @@ defineProps<{
           <Link
             class="mt-3 inline-block text-sm font-medium underline underline-offset-4"
             :href="loansIndex()"
-            >Ver préstamos</Link
+            >Ver mis préstamos</Link
           ></CardContent
         ></Card
       >
     </div>
+    <p v-if="hasLoans && upcomingInstallments.length === 0" class="text-sm text-muted-foreground">
+      No tienes cuotas pendientes. <Link class="font-medium underline underline-offset-4" :href="loansIndex()">Consultar mis préstamos</Link>
+    </p>
   </main>
 </template>

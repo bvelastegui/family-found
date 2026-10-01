@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import { Head, Link, useForm } from '@inertiajs/vue3';
 import { dashboard } from '@/routes';
 import {
@@ -74,6 +74,7 @@ defineOptions({
 });
 const approval = useForm({ idempotency_key: operationKey() });
 const rejection = useForm({ idempotency_key: operationKey(), reason: '' });
+const showingRejection = ref(false);
 const approvalEvent = computed(() =>
   props.events.find((event) => event.event === 'transaction.approved'),
 );
@@ -204,18 +205,19 @@ function reason(event: Event): string | null {
         </ul></CardContent
       ></Card
     >
-    <Card v-if="isTreasurer && transaction.status === 'pending'"
-      ><CardHeader
-        ><CardTitle>Conciliar comprobante</CardTitle
-        ><CardDescription
-          >Revisa la evidencia y el monto antes de decidir. El rechazo requiere
-          un motivo.</CardDescription
-        ></CardHeader
-      ><CardContent class="flex flex-col gap-5"
-        ><form @submit.prevent="approval.post(approve(transaction.id).url)">
-          <Button :disabled="approval.processing"
-            >Aprobar y contabilizar</Button
-          >
+    <Card v-if="isTreasurer && transaction.status === 'pending'">
+      <CardHeader>
+        <CardTitle>Decidir sobre este comprobante</CardTitle>
+        <CardDescription>
+          Comprueba el monto, la asignación y la evidencia antes de decidir.
+          Aprobar no requiere completar ningún campo.
+        </CardDescription>
+      </CardHeader>
+      <CardContent class="flex flex-col items-start gap-4">
+        <form @submit.prevent="approval.post(approve(transaction.id).url)">
+          <Button :disabled="approval.processing || rejection.processing">
+            Aprobar y contabilizar
+          </Button>
           <p
             v-if="approval.hasErrors"
             role="alert"
@@ -225,32 +227,67 @@ function reason(event: Event): string | null {
             siendo válidas.
           </p>
         </form>
+        <Button
+          v-if="!showingRejection"
+          type="button"
+          variant="outline"
+          :disabled="approval.processing"
+          @click="showingRejection = true"
+        >
+          Necesito rechazarlo
+        </Button>
         <form
-          class="flex flex-col gap-2"
+          v-if="showingRejection"
+          id="rejection-form"
+          class="flex w-full flex-col items-start gap-3 rounded-lg border p-4"
           @submit.prevent="rejection.post(reject(transaction.id).url)"
         >
-          <Label for="rejection-reason">Motivo del rechazo</Label
-          ><AutoResizeTextarea
-            id="rejection-reason"
-            v-model="rejection.reason"
-            required
-            :aria-invalid="!!rejection.errors.reason"
-            maxlength="5000"
-          />
-          <p
-            v-if="rejection.errors.reason"
-            class="text-sm text-destructive"
-          >
-            {{ rejection.errors.reason }}
-          </p>
-          <Button
-            variant="outline"
-            :disabled="rejection.processing"
-            >Rechazar sin asiento</Button
-          >
-        </form></CardContent
-      ></Card
-    >
+          <div>
+            <p class="font-medium">Rechazar comprobante</p>
+            <p class="text-sm text-muted-foreground">
+              Solo para rechazar debes explicar el motivo. No se registrará
+              ningún movimiento en el fondo.
+            </p>
+          </div>
+          <div class="flex w-full flex-col gap-2">
+            <Label for="rejection-reason">Motivo del rechazo (obligatorio)</Label>
+            <AutoResizeTextarea
+              id="rejection-reason"
+              v-model="rejection.reason"
+              required
+              :aria-invalid="!!rejection.errors.reason"
+              :aria-describedby="rejection.errors.reason ? 'rejection-error' : undefined"
+              maxlength="5000"
+            />
+            <p
+              v-if="rejection.errors.reason"
+              id="rejection-error"
+              role="alert"
+              class="text-sm text-destructive"
+            >
+              {{ rejection.errors.reason }}
+            </p>
+          </div>
+          <div class="flex flex-wrap gap-2">
+            <Button
+              type="submit"
+              variant="destructive"
+              :disabled="rejection.processing || approval.processing"
+            >
+              Confirmar rechazo
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              :disabled="rejection.processing"
+              @click="showingRejection = false; rejection.clearErrors()"
+            >
+              Cancelar
+            </Button>
+          </div>
+        </form>
+      </CardContent>
+    </Card>
     <Card
       v-if="
         isTreasurer &&

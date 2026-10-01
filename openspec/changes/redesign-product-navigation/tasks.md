@@ -16,13 +16,14 @@
 ## 3. Tesorería y administración
 
 - [x] 3.1 Crear bandeja de conciliación con saldos contables y reservas separados de pendientes.
-- [x] 3.2 Separar pantallas de cuotas y bancos, y mantener la designación del tesorero solo para administrador.
+- [x] 3.2 Separar pantallas de cuotas y bancos, configurar períodos por rango y editar cuotas futuras; designar tesorero solo por consola.
 - [x] 3.3 Crear corrección guiada con datos legibles y precargados, manteniendo motivo, evidencia y reversión atómica.
 - [x] 3.4 Presentar historia de decisiones con acciones, autor, motivo y fechas locales; eliminar el título duplicado de Transacciones y usar áreas de texto autoajustables para motivos.
 - [x] 3.5 Reutilizar tarjetas de estadísticas según `ExampleCards.vue` en Inicio y Tesorería, mostrando solo etiquetas y datos reales.
 - [x] 3.6 Usar paginación compartida solo cuando haya más de una página, incluidos Préstamos y Administración.
 - [x] 3.7 Crear desde Tesorería la reserva de préstamos en una pantalla protegida y contextualizar el disponible del fondo.
 - [x] 3.8 Trasladar la corrección del desembolso a una pantalla guiada y advertir antes de editar si existen pagos dependientes.
+- [x] 3.9 Ocultar próximas cuotas vacías, mostrar solo meses configurados en Aportes, mejorar la tabla y búsqueda de Transacciones y situar Préstamos en Tesorería.
 
 ## 4. Verificación
 

@@ -31,6 +31,8 @@ class FundTransactionController extends Controller
         $status = $request->query('status');
         $type = $request->query('type');
         abort_unless(in_array($status, [null, 'pending', 'approved', 'rejected'], true) && in_array($type, [null, 'contribution', 'loan'], true), 404);
+        $validated = $request->validate(['search' => ['sometimes', 'nullable', 'string', 'max:100']]);
+        $search = trim((string) ($validated['search'] ?? ''));
         $transactions = FundTransaction::query()->when(! $treasurer, fn ($query) => $query->where('user_id', $request->user()->id))
             ->when($status, fn ($query) => $query->where('status', $status))
             ->when($type, function ($query) use ($type): void {
@@ -38,21 +40,46 @@ class FundTransactionController extends Controller
                     ->whereColumn('allocation.fund_transaction_id', 'fund_transactions.id')
                     ->whereNotNull($type === 'contribution' ? 'allocation.contribution_period_id' : 'allocation.loan_installment_id'));
             })
+            ->when($search !== '', function ($query) use ($search, $treasurer): void {
+                $query->where(function ($searchQuery) use ($search, $treasurer): void {
+                    $searchQuery->where('reference', 'like', "%{$search}%")
+                        ->orWhere('bank_name', 'like', "%{$search}%");
+                    if ($treasurer) {
+                        $searchQuery->orWhereHas('user', fn ($userQuery) => $userQuery->where('name', 'like', "%{$search}%"));
+                    }
+                });
+            })
             ->with('user:id,name')->latest('id')->paginate(15)->withQueryString();
+        $destinations = DB::table('transaction_allocations')
+            ->whereIn('fund_transaction_id', $transactions->getCollection()->pluck('id'))
+            ->groupBy('fund_transaction_id')
+            ->select('fund_transaction_id')
+            ->selectRaw('MAX(CASE WHEN contribution_period_id IS NOT NULL THEN 1 ELSE 0 END) AS has_contribution')
+            ->selectRaw('MAX(CASE WHEN loan_installment_id IS NOT NULL THEN 1 ELSE 0 END) AS has_loan')
+            ->get()->keyBy('fund_transaction_id');
         $approvals = DB::table('operation_events as event')
             ->join('users as actor', 'actor.id', '=', 'event.actor_id')
             ->where('event.subject_type', 'transaction')->where('event.event', 'transaction.approved')
             ->whereIn('event.subject_id', $transactions->getCollection()->pluck('id'))
             ->get(['event.subject_id', 'actor.name as actor_name', 'event.created_at'])->keyBy('subject_id');
-        $transactions->through(function (FundTransaction $transaction) use ($approvals): FundTransaction {
+        $transactions->through(function (FundTransaction $transaction) use ($approvals, $destinations): FundTransaction {
             $transaction->setAttribute('approved_by', $approvals[$transaction->id]->actor_name ?? null);
             $transaction->setAttribute('approved_at', $approvals[$transaction->id]->created_at ?? null);
+            $destination = $destinations[$transaction->id] ?? null;
+            $hasContribution = $destination !== null && (bool) $destination->has_contribution;
+            $hasLoan = $destination !== null && (bool) $destination->has_loan;
+            $transaction->setAttribute('destination_label', match (true) {
+                $hasContribution && $hasLoan => 'Aporte y préstamo',
+                $hasContribution => 'Aporte',
+                $hasLoan => 'Préstamo',
+                default => 'Sin asignación',
+            });
 
             return $transaction;
         });
 
         return Inertia::render('fund/Transactions', [
-            'transactions' => $transactions, 'filters' => ['status' => $status ?? '', 'type' => $type ?? ''],
+            'transactions' => $transactions, 'filters' => ['status' => $status ?? '', 'type' => $type ?? '', 'search' => $search],
             'isTreasurer' => $treasurer,
         ]);
     }

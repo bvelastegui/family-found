@@ -10,6 +10,7 @@ use App\Enums\TransactionStatus;
 use App\Models\ContributionPeriod;
 use App\Models\FundSetting;
 use App\Models\FundTransaction;
+use App\Models\Loan;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
@@ -57,6 +58,7 @@ class FundController extends Controller
             'pendingContributionId' => $ownPending->first(fn (FundTransaction $transaction): bool => $transaction->pending_contributor_id !== null)?->id,
             'pendingTransactions' => $ownPending,
             'upcomingInstallments' => $upcoming,
+            'hasLoans' => Loan::query()->where('user_id', $user->id)->exists(),
             'pendingReviewCount' => $treasurer ? FundTransaction::query()->where('status', TransactionStatus::Pending)->count() : 0,
         ]);
     }

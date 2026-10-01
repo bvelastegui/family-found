@@ -2,7 +2,7 @@
 
 ### Requirement: Inicio operativo
 
-El sistema SHALL ofrecer un Inicio autenticado en `/dashboard` que destaque el próximo aporte, transacciones propias en revisión y cuotas de préstamos del usuario, con acceso a registrar transferencia. La vista del tesorero SHALL incluir pendientes de conciliación, sin sumar importes PENDIENTES al saldo del fondo. `/fund` SHALL redirigir a `/dashboard`.
+El sistema SHALL ofrecer un Inicio autenticado en `/dashboard` que destaque el próximo aporte configurado, transacciones propias en revisión y cuotas de préstamos del usuario, con acceso a registrar transferencia. SHALL ocultar la sección de próximas cuotas si no existen cuotas; si hay préstamos sin cuotas pendientes, SHALL conservar un acceso sencillo a ellos. La vista del tesorero SHALL incluir pendientes de conciliación, sin sumar importes PENDIENTES al saldo del fondo. `/fund` SHALL redirigir a `/dashboard`.
 
 #### Scenario: Aportante sin movimientos
 
@@ -16,12 +16,12 @@ El sistema SHALL ofrecer un Inicio autenticado en `/dashboard` que destaque el p
 
 ### Requirement: Navegación de primer nivel
 
-El sistema SHALL presentar Inicio, Aportes, Transacciones y Préstamos como navegación general. SHALL mostrar en un grupo separado Tesorería las entradas Resumen, Cuotas y Bancos solo al tesorero. SHALL mostrar en un grupo Administración la designación del tesorero solo al administrador. SHALL destacar la entrada activa en páginas de detalle y usar la misma navegación en pantallas pequeñas. La marca visible SHALL decir Fondo Familiar.
+El sistema SHALL presentar Inicio, Aportes y Transacciones como navegación general. SHALL mostrar en un grupo separado Tesorería las entradas Resumen, Préstamos, Cuotas, Bancos y Participantes solo al tesorero. La designación del tesorero SHALL realizarse por comando de consola y no aparecer en la navegación web. SHALL destacar la entrada activa en páginas de detalle y usar la misma navegación en pantallas pequeñas. La marca visible SHALL decir Fondo Familiar.
 
 #### Scenario: Usuario ordinario
 
 - **WHEN** un participante sin permisos financieros navega por la aplicación
-- **THEN** puede abrir las cuatro secciones personales y no ve enlaces de Tesorería o Administración.
+- **THEN** puede abrir las secciones personales y sus préstamos desde las vistas correspondientes, sin enlaces de Tesorería o Administración.
 
 #### Scenario: URL privilegiada conocida
 
@@ -31,11 +31,11 @@ El sistema SHALL presentar Inicio, Aportes, Transacciones y Préstamos como nave
 #### Scenario: Administrador sin tesorería
 
 - **WHEN** el administrador no es el tesorero designado
-- **THEN** ve Administración y no ve el grupo Tesorería con Resumen, Cuotas o Bancos.
+- **THEN** no puede acceder al grupo Tesorería ni designar tesorero mediante la web.
 
 ### Requirement: Aportes como calendario personal
 
-El sistema SHALL ofrecer Aportes como página propia organizada en años. SHALL mostrar los doce meses del año seleccionado sin paginación numérica, incluidos los meses antes del inicio del fondo o todavía sin cuota configurada. Los períodos definidos SHALL distinguir cuota pagada, en revisión, pendiente y próxima, con importe y vínculo a la transacción cuando corresponda. SHALL mostrar total aprobado del año y total histórico. El primer mes procede de `contribution_periods`, no del registro del usuario. El selector y enlaces entre años SHALL permitir consultar desde el primer año configurado hasta el año actual, sin mezclar meses de años distintos.
+El sistema SHALL ofrecer Aportes como página propia organizada en años y mostrar solo los meses que tienen cuota configurada, sin Card exterior ni paginación numérica. Los períodos definidos SHALL distinguir cuota pagada, en revisión, pendiente y próxima, con importe y vínculo a la transacción cuando corresponda. SHALL mostrar total aprobado del año y total histórico. El primer mes procede de `contribution_periods`, no del registro del usuario. El selector y enlaces entre años SHALL permitir consultar desde el primer año configurado hasta el año actual, sin mezclar meses de años distintos.
 
 #### Scenario: Inscripción posterior al primer mes
 
@@ -45,16 +45,16 @@ El sistema SHALL ofrecer Aportes como página propia organizada en años. SHALL 
 #### Scenario: Dos años de aportes
 
 - **WHEN** el fondo contiene períodos de 2026 y 2027
-- **THEN** Aportes muestra doce meses del año seleccionado y permite cambiar de 2027 a 2026, conservando los estados y totales de cada año sin paginar los meses.
+- **THEN** Aportes muestra solo los períodos configurados del año seleccionado y permite cambiar de 2027 a 2026, conservando los estados y totales de cada año sin paginar los meses.
 
 #### Scenario: Meses sin cuota
 
 - **WHEN** febrero aún no tiene un período configurado
-- **THEN** febrero aparece como cuota por definir, sin inventar un importe ni marcarlo como atraso.
+- **THEN** febrero no aparece en el calendario y no se le atribuye importe ni atraso.
 
 ### Requirement: Historial de transacciones
 
-El sistema SHALL ofrecer un índice paginado de transacciones separado del calendario de aportes, con filtro por estado y por aportes o pagos de préstamos. Los participantes SHALL ver solo sus registros. El tesorero SHALL poder consultar todas las transacciones para conciliar. Cada transacción aprobada SHALL mostrar el nombre y la fecha local de quien la autorizó.
+El sistema SHALL ofrecer una tabla paginada de transacciones separada del calendario de aportes, con búsqueda y filtros por estado y por aportes o pagos de préstamos; cada fila SHALL identificar su destino. Los participantes SHALL ver solo sus registros. El tesorero SHALL poder consultar todas las transacciones para conciliar. Cada transacción aprobada SHALL mostrar el nombre y la fecha local de quien la autorizó.
 
 #### Scenario: Filtrar pendientes
 

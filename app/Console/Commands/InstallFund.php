@@ -42,7 +42,7 @@ class InstallFund extends Command
 
             return self::FAILURE;
         }
-        $this->info('Fondo instalado. El administrador puede iniciar sesión y designar al tesorero.');
+        $this->info('Fondo instalado. Designa al tesorero con fund:assign-treasurer "Nombre del usuario".');
 
         return self::SUCCESS;
     }

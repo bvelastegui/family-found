@@ -147,9 +147,7 @@ test('transferring the only treasurer immediately removes the old treasurer fina
     $administrator = $oldTreasurer;
     $newTreasurer = User::factory()->create();
 
-    $this->actingAs($administrator)->post(route('administration.treasurer.update'), [
-        'idempotency_key' => (string) Str::uuid(), 'user_id' => $newTreasurer->id,
-    ])->assertRedirect(route('administration.treasurer.edit'));
+    $this->artisan('fund:assign-treasurer', ['name' => $newTreasurer->name, '--no-interaction' => true])->assertSuccessful();
 
     $this->assertDatabaseHas('fund_settings', ['id' => 1, 'treasurer_id' => $newTreasurer->id]);
     $this->actingAs($oldTreasurer)->post(route('fund.contribution-periods.store'), [
@@ -159,6 +157,32 @@ test('transferring the only treasurer immediately removes the old treasurer fina
         'idempotency_key' => (string) Str::uuid(), 'month' => '2027-01', 'amount' => '25.00',
     ])->assertSessionHasNoErrors();
     $this->assertDatabaseHas('contribution_periods', ['month' => '2027-01-01', 'amount_cents' => 2500]);
+});
+
+test('a treasurer can configure a future range atomically and edit an unused month', function () {
+    [$treasurer, $member] = prepareFund();
+    $route = route('fund.contribution-periods.range');
+    $payload = ['idempotency_key' => (string) Str::uuid(), 'first_month' => '2027-01', 'last_month' => '2027-03', 'amount' => '25.00'];
+
+    $this->actingAs($member)->post($route, $payload)->assertForbidden();
+    $this->actingAs($treasurer)->post($route, $payload)->assertSessionHasNoErrors();
+    $this->assertDatabaseHas('contribution_periods', ['month' => '2027-02-01', 'amount_cents' => 2500]);
+    $this->actingAs($treasurer)->post($route, $payload)->assertSessionHasNoErrors();
+    $this->assertDatabaseCount('contribution_periods', 4);
+
+    $this->actingAs($treasurer)->post(route('fund.contribution-periods.store'), [
+        'idempotency_key' => (string) Str::uuid(), 'month' => '2027-02', 'amount' => '30.00',
+    ])->assertSessionHasNoErrors();
+    $this->assertDatabaseHas('contribution_periods', ['month' => '2027-02-01', 'amount_cents' => 3000]);
+
+    $this->actingAs($treasurer)->post($route, [
+        'idempotency_key' => (string) Str::uuid(),
+        'first_month' => now('America/Guayaquil')->subMonth()->format('Y-m'),
+        'last_month' => now('America/Guayaquil')->addMonth()->format('Y-m'),
+        'amount' => '35.00',
+    ])->assertSessionHasErrors('first_month');
+    $this->assertDatabaseHas('contribution_periods', ['month' => '2027-01-01', 'amount_cents' => 2500]);
+    $this->assertDatabaseMissing('contribution_periods', ['month' => now('America/Guayaquil')->subMonth()->startOfMonth()->toDateString()]);
 });
 
 test('a member can submit only one pending contribution and the same month cannot be paid twice', function () {

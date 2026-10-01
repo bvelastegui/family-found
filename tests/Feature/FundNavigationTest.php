@@ -191,7 +191,7 @@ test('treasury and correction screens remain protected after treasurer handover'
 
     app(FundAdministration::class)->treasurer($administrator, (string) Str::uuid(), $member->id);
     $this->actingAs($administrator)->get(route('fund.treasury.index'))->assertForbidden();
-    $this->actingAs($administrator)->get(route('administration.treasurer.edit'))->assertOk();
+    $this->actingAs($administrator)->get(route('fund.treasury.participants.index'))->assertForbidden();
     $this->actingAs($member)->get(route('fund.treasury.index'))->assertOk();
     $this->actingAs($administrator)->get(route('dashboard'))->assertInertia(fn (Assert $page) => $page
         ->component('Dashboard')->where('fundRoles.administrator', true)->where('fundRoles.treasurer', false));

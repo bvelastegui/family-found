@@ -2,18 +2,20 @@
 
 namespace App\Http\Requests\Fund;
 
-use App\Models\FundSetting;
+use App\Concerns\PasswordValidationRules;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 
-class FundTreasurerRequest extends FormRequest
+class AcceptFundInvitationRequest extends FormRequest
 {
+    use PasswordValidationRules;
+
     /**
      * Determine if the user is authorized to make this request.
      */
     public function authorize(): bool
     {
-        return $this->user() !== null && FundSetting::current()->isAdministrator($this->user());
+        return true;
     }
 
     /**
@@ -24,8 +26,8 @@ class FundTreasurerRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'idempotency_key' => ['required', 'uuid'],
-            'user_id' => ['required', 'integer', 'exists:users,id'],
+            'name' => ['required', 'string', 'max:255'],
+            'password' => $this->passwordRules(),
         ];
     }
 }

@@ -23,7 +23,7 @@ La aplicación usa Laravel 13, Inertia 3, Vue 3, Tailwind 4 y componentes locale
 
 ### Navegación y destino inicial
 
-`/dashboard` presenta acciones personales y contexto breve; `/fund` redirige allí. El sidebar separa navegación general (Inicio, Aportes, Transacciones y Préstamos), grupo Tesorería (Resumen, Cuotas y Bancos) solo para el tesorero y grupo Administración (Designar tesorero) solo para el administrador. Las pantallas de tesorería no repiten enlaces a Cuotas o Bancos dentro del contenido. El menú activo considera detalles e hijos, no solo coincidencia exacta; el logo vuelve a Inicio. Se eliminan enlaces de ejemplo del footer. En móvil, el sidebar colapsable existente mantiene las mismas rutas y etiquetas.
+`/dashboard` presenta acciones personales y contexto breve; `/fund` redirige allí. El sidebar separa navegación general (Inicio, Aportes y Transacciones) del grupo Tesorería (Resumen, Préstamos, Cuotas, Bancos y Participantes). La designación del tesorero se hace por consola. Las pantallas de tesorería no repiten enlaces a Cuotas o Bancos dentro del contenido. El menú activo considera detalles e hijos, no solo coincidencia exacta; el logo vuelve a Inicio. Se eliminan enlaces de ejemplo del footer. En móvil, el sidebar colapsable existente mantiene las mismas rutas y etiquetas.
 
 La marca visible usa Fondo Familiar. El diseño deriva de los tokens, tipografía y componentes ya instalados, sin imágenes de stock ni estilos ajenos al proyecto.
 
@@ -34,12 +34,12 @@ Las tarjetas de estadísticas reutilizan CardHeader, CardDescription, CardTitle,
 | Página          | Contenido principal                                                                                                          | Origen de datos                                                                                  |
 | --------------- | ---------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
 | Inicio          | Siguiente aporte o bloqueo en revisión, transferencias pendientes propias, cuotas de préstamo por atender, botón de registro | Períodos definidos, aplicaciones aprobadas, registros pendientes, cuotas, zona America/Guayaquil |
-| Aportes         | Doce meses del año elegido, pagados, próximos, sin cuota, total anual e histórico y enlace a comprobante                     | `contribution_periods`, asignaciones vigentes aprobadas, registro pendiente personal             |
+| Aportes         | Meses configurados del año elegido, pagados, próximos, total anual e histórico y enlace a comprobante                     | `contribution_periods`, asignaciones vigentes aprobadas, registro pendiente personal             |
 | Transacciones   | Historial unificado paginado, filtro por estado y tipos de destino, acceso al detalle y evidencia                            | `fund_transactions` y `transaction_allocations`, solo las propias salvo tesorero                 |
 | Préstamos       | Tabla con capital, pendiente, tasa, plazo y estado, más detalle con amortización; sin formulario de alta                     | Préstamos, saldo contable y cuotas actuales                                                      |
 | Tesorería       | Bandeja PENDIENTE paginada, detalle de verificación, reservas y saldos del fondo                                             | Registros sin asientos pendientes, `FundBalances`, préstamos reservados                          |
 | Cuotas y Bancos | Dos pantallas propias, cada una con su formulario, lista y estados vacíos                                                    | Catálogos actuales                                                                               |
-| Administración  | Designación del único tesorero entre usuarios existentes                                                                     | `fund_settings` y `users`                                                                        |
+| Participantes   | Invitación privada y alta directa por tesorero                                                                                | `fund_invitations` y `users`                                                                      |
 
 Las consultas paginan historiales y presentan estados vacíos. El saldo mostrado proviene solo de asientos aprobados; la bandeja jamás suma transferencias pendientes al efectivo. El participante puede ver sus datos, el tesorero los de todos para conciliar y el administrador solo sus finanzas propias salvo que también sea tesorero.
 
