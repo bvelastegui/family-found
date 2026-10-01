@@ -10,9 +10,10 @@ use App\Http\Controllers\FundParticipantController;
 use App\Http\Controllers\FundTransactionController;
 use App\Http\Controllers\FundTreasuryController;
 use App\Http\Controllers\PushSubscriptionController;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
-Route::inertia('/', 'Welcome')->name('home');
+Route::get('/', fn (Request $request) => to_route($request->user() === null ? 'login' : 'dashboard'))->name('home');
 
 Route::middleware(['guest', 'signed'])->group(function () {
     Route::get('invitations/{invitation}', [FundInvitationController::class, 'show'])->name('invitations.show');
