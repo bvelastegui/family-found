@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Actions\Fund\ManageParticipants;
+use App\Http\Requests\Fund\CancelFundInvitationRequest;
 use App\Http\Requests\Fund\CreateFundParticipantRequest;
 use App\Http\Requests\Fund\IssueFundInvitationRequest;
 use App\Models\FundInvitation;
@@ -20,8 +21,22 @@ class FundParticipantController extends Controller
         abort_unless(FundSetting::current()->isTreasurer($request->user()), 403);
 
         return Inertia::render('fund/Participants', [
-            'participants' => User::query()->orderBy('name')->paginate(15, ['id', 'name', 'email', 'created_at']),
-            'invitations' => FundInvitation::query()->latest('id')->paginate(10, ['id', 'email', 'invited_by_id', 'expires_at', 'used_at', 'created_at'], 'invitations'),
+            'participants' => User::query()->orderBy('name')->paginate(15, ['id', 'name', 'email', 'created_at'])->withQueryString(),
+            'invitations' => FundInvitation::query()
+                ->select(['id', 'email', 'invited_by_id', 'expires_at', 'used_at', 'cancelled_at', 'created_at'])
+                ->selectSub(FundInvitation::query()->from('fund_invitations as latest_invitation')->selectRaw('MAX(latest_invitation.id)')->whereColumn('latest_invitation.email', 'fund_invitations.email'), 'latest_invitation_id')
+                ->latest('id')->paginate(10, ['*'], 'invitations')->withQueryString()
+                ->through(function (FundInvitation $invitation): array {
+                    $status = match (true) {
+                        $invitation->used_at !== null => 'accepted',
+                        $invitation->cancelled_at !== null => 'cancelled',
+                        ! $invitation->expires_at->isFuture() => 'expired',
+                        $invitation->id !== (int) $invitation->getAttribute('latest_invitation_id') => 'superseded',
+                        default => 'pending',
+                    };
+
+                    return [...$invitation->only(['id', 'email', 'expires_at', 'used_at', 'cancelled_at', 'created_at']), 'status' => $status];
+                }),
         ]);
     }
 
@@ -39,5 +54,13 @@ class FundParticipantController extends Controller
         Inertia::flash('toast', ['type' => 'success', 'message' => 'Cuenta creada. Enviamos un enlace para establecer la contraseña.']);
 
         return to_route('fund.treasury.participants.index');
+    }
+
+    public function cancel(CancelFundInvitationRequest $request, FundInvitation $invitation, ManageParticipants $participants): RedirectResponse
+    {
+        $participants->cancel($request->user(), (string) $request->validated('idempotency_key'), $invitation);
+        Inertia::flash('toast', ['type' => 'success', 'message' => 'Invitación cancelada. El enlace ya no permite crear una cuenta.']);
+
+        return back();
     }
 }

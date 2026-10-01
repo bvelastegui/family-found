@@ -4,7 +4,9 @@ use App\Models\FundInvitation;
 use App\Models\User;
 use App\Notifications\FundInvitationNotification;
 use Illuminate\Auth\Notifications\ResetPassword;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Str;
 use Inertia\Testing\AssertableInertia as Assert;
 
@@ -109,4 +111,76 @@ test('ambiguous noninteractive treasurer assignment does not change the fund', f
 
     $this->artisan('fund:assign-treasurer', ['name' => 'Tesorero', '--no-interaction' => true])->assertFailed();
     $this->assertDatabaseHas('fund_settings', ['id' => 1, 'treasurer_id' => $treasurer->id]);
+});
+
+test('the current treasurer can cancel an invitation sent by another person and invalidate its link', function () {
+    [$treasurer, $member] = prepareFund();
+    $token = 'token-de-invitacion';
+    $invitation = FundInvitation::factory()->create([
+        'invited_by_id' => $member->id,
+        'token_hash' => hash('sha256', $token),
+    ]);
+    $url = URL::temporarySignedRoute('invitations.show', $invitation->expires_at, ['invitation' => $invitation->id, 'token' => $token]);
+    $payload = ['idempotency_key' => (string) Str::uuid()];
+
+    $this->actingAs($treasurer)->post(route('fund.treasury.participants.cancel', $invitation), $payload)->assertSessionHasNoErrors();
+    $cancelledAt = $invitation->fresh()->cancelled_at;
+    expect($cancelledAt)->not->toBeNull();
+    $this->assertDatabaseHas('operation_events', ['actor_id' => $treasurer->id, 'event' => 'participant.invitation-cancelled', 'subject_id' => $invitation->id]);
+    $this->actingAs($treasurer)->post(route('fund.treasury.participants.cancel', $invitation), $payload)->assertSessionHasNoErrors();
+    expect($invitation->fresh()->cancelled_at->equalTo($cancelledAt))->toBeTrue();
+    expect(DB::table('operation_events')->where('event', 'participant.invitation-cancelled')->count())->toBe(1);
+
+    $this->app['auth']->logout();
+    $this->get($url)->assertStatus(410);
+    $this->post($url, ['name' => 'Invitada', 'password' => 'password-segura', 'password_confirmation' => 'password-segura'])->assertStatus(410);
+    $this->assertDatabaseMissing('users', ['email' => $invitation->email]);
+    $this->assertDatabaseHas('fund_invitations', ['id' => $invitation->id, 'used_at' => null]);
+});
+
+test('participants cannot cancel invitations even when they sent them', function () {
+    [$treasurer, $member] = prepareFund();
+    $invitation = FundInvitation::factory()->create(['invited_by_id' => $member->id]);
+
+    $this->actingAs($member)->post(route('fund.treasury.participants.cancel', $invitation), ['idempotency_key' => (string) Str::uuid()])->assertForbidden();
+
+    $this->assertDatabaseHas('fund_invitations', ['id' => $invitation->id, 'cancelled_at' => null]);
+    $this->assertDatabaseMissing('operation_events', ['event' => 'participant.invitation-cancelled']);
+});
+
+test('accepted and expired invitations cannot be cancelled', function (string $state, string $message) {
+    [$treasurer] = prepareFund();
+    $invitation = FundInvitation::factory()->create([
+        'invited_by_id' => $treasurer->id,
+        'used_at' => $state === 'accepted' ? now() : null,
+        'expires_at' => $state === 'expired' ? now()->subMinute() : now()->addDay(),
+    ]);
+
+    $this->actingAs($treasurer)->post(route('fund.treasury.participants.cancel', $invitation), ['idempotency_key' => (string) Str::uuid()])->assertSessionHasErrors(['invitation' => $message]);
+
+    $this->assertDatabaseHas('fund_invitations', ['id' => $invitation->id, 'cancelled_at' => null]);
+})->with([
+    ['accepted', 'No puedes cancelar una invitación que ya fue aceptada.'],
+    ['expired', 'Esta invitación ya venció.'],
+]);
+
+test('cancelled invitations no longer block direct participant creation', function () {
+    Notification::fake();
+    [$treasurer] = prepareFund();
+    $invitation = FundInvitation::factory()->create(['invited_by_id' => $treasurer->id, 'cancelled_at' => now()]);
+
+    $this->actingAs($treasurer)->post(route('fund.treasury.participants.store'), ['name' => 'Nueva persona', 'email' => $invitation->email, 'idempotency_key' => (string) Str::uuid()])->assertSessionHasNoErrors();
+
+    $this->assertDatabaseHas('users', ['email' => $invitation->email]);
+});
+
+test('the invitation list exposes server calculated statuses without exposing tokens', function () {
+    [$treasurer] = prepareFund();
+    $previous = FundInvitation::factory()->create(['invited_by_id' => $treasurer->id]);
+    $cancelled = FundInvitation::factory()->create(['invited_by_id' => $treasurer->id, 'email' => $previous->email, 'cancelled_at' => now()]);
+
+    $this->actingAs($treasurer)->get(route('fund.treasury.participants.index'))->assertInertia(fn (Assert $page) => $page
+        ->where('invitations.data.0.status', 'cancelled')
+        ->where('invitations.data.1.status', 'superseded')
+        ->missing('invitations.data.0.token_hash'));
 });

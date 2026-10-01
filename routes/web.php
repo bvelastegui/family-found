@@ -33,6 +33,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::delete('push-subscriptions', [PushSubscriptionController::class, 'destroy'])->name('push-subscriptions.destroy');
         Route::get('treasury/participants', [FundParticipantController::class, 'index'])->name('treasury.participants.index');
         Route::post('treasury/participants/invitations', [FundParticipantController::class, 'invite'])->name('treasury.participants.invite');
+        Route::post('treasury/participants/invitations/{invitation}/cancel', [FundParticipantController::class, 'cancel'])->name('treasury.participants.cancel');
         Route::post('treasury/participants', [FundParticipantController::class, 'store'])->name('treasury.participants.store');
         Route::get('treasury/loans/create', [FundLoanController::class, 'create'])->name('treasury.loans.create');
         Route::get('transactions/create', [FundTransactionController::class, 'create'])->name('transactions.create');

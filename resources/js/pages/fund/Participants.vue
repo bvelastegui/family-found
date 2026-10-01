@@ -7,6 +7,7 @@ import {
   index as participantsIndex,
   store as createParticipant,
   invite as issueInvitation,
+  cancel as cancelInvitation,
 } from '@/routes/fund/treasury/participants';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -20,6 +21,7 @@ import {
 import FundPagination from '@/components/FundPagination.vue';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Spinner } from '@/components/ui/spinner';
 import {
   fundDateTime,
   operationKey,
@@ -31,6 +33,8 @@ type Invitation = {
   email: string;
   expires_at: string;
   used_at: string | null;
+  cancelled_at: string | null;
+  status: 'pending' | 'accepted' | 'cancelled' | 'expired' | 'superseded';
   created_at: string;
 };
 defineProps<{
@@ -53,6 +57,16 @@ defineOptions({
 });
 
 const mode = ref<'invite' | 'direct'>('invite');
+const cancellation = useForm({ idempotency_key: operationKey() });
+const cancellingId = ref<number | null>(null);
+const cancellationError = ref('');
+const invitationStatuses = {
+  pending: 'En espera',
+  accepted: 'Aceptada',
+  cancelled: 'Cancelada',
+  expired: 'Vencida',
+  superseded: 'Reemplazada',
+} as const;
 const invitation = useForm({ idempotency_key: operationKey(), email: '' });
 const direct = useForm({
   idempotency_key: operationKey(),
@@ -78,11 +92,24 @@ function submitDirect(): void {
   });
 }
 
-function invitationStatus(invite: Invitation): string {
-  if (invite.used_at) return 'Aceptada';
-  return new Date(invite.expires_at).getTime() < Date.now()
-    ? 'Vencida'
-    : 'En espera';
+function cancelPendingInvitation(invite: Invitation): void {
+  cancellingId.value = invite.id;
+  cancellationError.value = '';
+  cancellation.post(cancelInvitation(invite.id).url, {
+    preserveScroll: true,
+    onSuccess: () => {
+      cancellation.idempotency_key = operationKey();
+    },
+    onError: (errors) => {
+      cancellationError.value =
+        errors.invitation ??
+        errors.idempotency_key ??
+        'No se pudo cancelar la invitación.';
+    },
+    onFinish: () => {
+      cancellingId.value = null;
+    },
+  });
 }
 </script>
 
@@ -248,37 +275,137 @@ function invitationStatus(invite: Invitation): string {
       class="flex flex-col gap-3"
       aria-labelledby="invitations-heading"
     >
-      <h2
-        id="invitations-heading"
-        class="text-xl font-semibold"
+      <div class="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h2
+            id="invitations-heading"
+            class="text-xl font-semibold"
+          >
+            Invitaciones
+          </h2>
+          <p class="mt-1 text-sm text-muted-foreground">
+            Cancela las invitaciones enviadas por error. El enlace dejará de
+            funcionar y el registro se conservará.
+          </p>
+        </div>
+        <Badge variant="secondary"
+          >{{ invitations.total }}
+          {{ invitations.total === 1 ? 'invitación' : 'invitaciones' }}</Badge
+        >
+      </div>
+      <p
+        v-if="cancellationError"
+        role="alert"
+        class="text-sm text-destructive"
       >
-        Invitaciones
-      </h2>
+        {{ cancellationError }}
+      </p>
       <p
         v-if="!invitations.data.length"
         class="rounded-lg border p-5 text-sm text-muted-foreground"
       >
         Aún no hay invitaciones enviadas.
       </p>
-      <ul
+      <div
         v-else
-        class="divide-y rounded-lg border"
+        class="overflow-x-auto rounded-lg border"
       >
-        <li
-          v-for="invite in invitations.data"
-          :key="invite.id"
-          class="flex flex-wrap items-center justify-between gap-2 p-3 text-sm"
-        >
-          <div>
-            <p class="font-medium">{{ invite.email }}</p>
-            <p class="text-muted-foreground">
-              Enviada el {{ fundDateTime(invite.created_at) }} · Vence el
-              {{ fundDateTime(invite.expires_at) }}
-            </p>
-          </div>
-          <Badge variant="outline">{{ invitationStatus(invite) }}</Badge>
-        </li>
-      </ul>
+        <table class="w-full min-w-[760px] text-left text-sm">
+          <caption class="sr-only">
+            Historial de invitaciones y acciones disponibles
+          </caption>
+          <thead class="bg-muted/50 text-muted-foreground">
+            <tr>
+              <th
+                scope="col"
+                class="px-4 py-3 font-medium"
+              >
+                Correo electrónico
+              </th>
+              <th
+                scope="col"
+                class="px-4 py-3 font-medium"
+              >
+                Enviada
+              </th>
+              <th
+                scope="col"
+                class="px-4 py-3 font-medium"
+              >
+                Vencimiento
+              </th>
+              <th
+                scope="col"
+                class="px-4 py-3 font-medium"
+              >
+                Estado
+              </th>
+              <th
+                scope="col"
+                class="px-4 py-3 text-right font-medium"
+              >
+                Acciones
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr
+              v-for="invite in invitations.data"
+              :key="invite.id"
+              class="border-t transition-colors hover:bg-muted/30"
+            >
+              <th
+                scope="row"
+                class="px-4 py-4 font-medium"
+              >
+                <span class="break-all">{{ invite.email }}</span>
+              </th>
+              <td class="px-4 py-4 text-muted-foreground">
+                {{ fundDateTime(invite.created_at) }}
+              </td>
+              <td class="px-4 py-4 text-muted-foreground">
+                {{ fundDateTime(invite.expires_at) }}
+              </td>
+              <td class="px-4 py-4">
+                <Badge
+                  :variant="
+                    invite.status === 'pending' ? 'secondary' : 'outline'
+                  "
+                  >{{ invitationStatuses[invite.status] }}</Badge
+                >
+                <p
+                  v-if="invite.cancelled_at"
+                  class="mt-1 text-xs text-muted-foreground"
+                >
+                  {{ fundDateTime(invite.cancelled_at) }}
+                </p>
+              </td>
+              <td class="px-4 py-4 text-right">
+                <Button
+                  v-if="invite.status === 'pending'"
+                  variant="outline"
+                  size="sm"
+                  :disabled="cancellation.processing"
+                  :aria-label="`Cancelar invitación a ${invite.email}`"
+                  @click="cancelPendingInvitation(invite)"
+                >
+                  <Spinner v-if="cancellingId === invite.id" />
+                  {{
+                    cancellingId === invite.id
+                      ? 'Cancelando…'
+                      : 'Cancelar invitación'
+                  }}
+                </Button>
+                <span
+                  v-else
+                  class="text-xs text-muted-foreground"
+                  >Sin acciones</span
+                >
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
       <FundPagination
         :links="invitations.links"
         :last-page="invitations.last_page"

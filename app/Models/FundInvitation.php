@@ -16,8 +16,9 @@ use Illuminate\Support\Carbon;
  * @property int $invited_by_id
  * @property Carbon $expires_at
  * @property Carbon|null $used_at
+ * @property Carbon|null $cancelled_at
  */
-#[Fillable(['email', 'token_hash', 'invited_by_id', 'expires_at', 'used_at'])]
+#[Fillable(['email', 'token_hash', 'invited_by_id', 'expires_at', 'used_at', 'cancelled_at'])]
 #[Hidden(['token_hash'])]
 class FundInvitation extends Model
 {
@@ -27,6 +28,6 @@ class FundInvitation extends Model
     /** @return array<string, string> */
     protected function casts(): array
     {
-        return ['expires_at' => 'datetime', 'used_at' => 'datetime'];
+        return ['expires_at' => 'datetime', 'used_at' => 'datetime', 'cancelled_at' => 'datetime'];
     }
 }

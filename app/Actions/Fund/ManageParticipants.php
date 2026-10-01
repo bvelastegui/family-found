@@ -47,7 +47,7 @@ class ManageParticipants
     {
         $email = Str::lower(trim($email));
         $id = $this->operations->handle($treasurer, 'participant.create', $key, compact('name', 'email'), function () use ($treasurer, $name, $email): int {
-            if (User::query()->where('email', $email)->exists() || FundInvitation::query()->where('email', $email)->whereNull('used_at')->where('expires_at', '>', now())->exists()) {
+            if (User::query()->where('email', $email)->exists() || FundInvitation::query()->where('email', $email)->whereNull('used_at')->whereNull('cancelled_at')->where('expires_at', '>', now())->exists()) {
                 throw ValidationException::withMessages(['email' => 'Este correo ya tiene una cuenta o una invitación vigente.']);
             }
             $user = User::query()->create(['name' => trim($name), 'email' => $email, 'password' => Str::random(64)]);
@@ -81,9 +81,30 @@ class ManageParticipants
         }, 5);
     }
 
+    public function cancel(User $treasurer, string $key, FundInvitation $invitation): void
+    {
+        $this->operations->handle($treasurer, 'participant.invitation-cancel', $key, ['invitation_id' => $invitation->id], function () use ($treasurer, $invitation): int {
+            $invitation = FundInvitation::query()->lockForUpdate()->findOrFail($invitation->id);
+            if ($invitation->used_at !== null) {
+                throw ValidationException::withMessages(['invitation' => 'No puedes cancelar una invitación que ya fue aceptada.']);
+            }
+            if ($invitation->cancelled_at !== null) {
+                return $invitation->id;
+            }
+            if (! $invitation->expires_at->isFuture()) {
+                throw ValidationException::withMessages(['invitation' => 'Esta invitación ya venció.']);
+            }
+            $invitation->update(['cancelled_at' => now()]);
+            $this->events->handle($treasurer, 'participant.invitation-cancelled', 'invitation', $invitation->id, ['email' => $invitation->email]);
+
+            return $invitation->id;
+        }, 'treasurer');
+    }
+
     public function isActive(FundInvitation $invitation, string $token): bool
     {
         return $invitation->used_at === null
+            && $invitation->cancelled_at === null
             && $invitation->expires_at->isFuture()
             && hash_equals($invitation->token_hash, hash('sha256', $token))
             && (int) FundInvitation::query()->where('email', $invitation->email)->latest('id')->value('id') === $invitation->id
