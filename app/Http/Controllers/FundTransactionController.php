@@ -25,15 +25,23 @@ use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class FundTransactionController extends Controller
 {
-    public function index(Request $request): Response
+    public function reconciliation(Request $request): Response
+    {
+        abort_unless(FundSetting::current()->isTreasurer($request->user()), 403);
+
+        return $this->index($request, true);
+    }
+
+    public function index(Request $request, bool $reconciliation = false): Response
     {
         $treasurer = FundSetting::current()->isTreasurer($request->user());
-        $status = $request->query('status');
+        $status = $request->query->has('status') ? $request->query('status') : ($reconciliation ? 'pending' : null);
+        $status = $status === '' ? null : $status;
         $type = $request->query('type');
         abort_unless(in_array($status, [null, 'pending', 'approved', 'rejected'], true) && in_array($type, [null, 'contribution', 'loan'], true), 404);
         $validated = $request->validate(['search' => ['sometimes', 'nullable', 'string', 'max:100']]);
         $search = trim((string) ($validated['search'] ?? ''));
-        $transactions = FundTransaction::query()->when(! $treasurer, fn ($query) => $query->where('user_id', $request->user()->id))
+        $transactions = FundTransaction::query()->when(! $reconciliation, fn ($query) => $query->where('user_id', $request->user()->id))
             ->when($status, fn ($query) => $query->where('status', $status))
             ->when($type, function ($query) use ($type): void {
                 $query->whereExists(fn ($subquery) => $subquery->selectRaw('1')->from('transaction_allocations as allocation')
@@ -81,6 +89,7 @@ class FundTransactionController extends Controller
         return Inertia::render('fund/Transactions', [
             'transactions' => $transactions, 'filters' => ['status' => $status ?? '', 'type' => $type ?? '', 'search' => $search],
             'isTreasurer' => $treasurer,
+            'reconciliation' => $reconciliation,
         ]);
     }
 
@@ -124,7 +133,7 @@ class FundTransactionController extends Controller
 
         $treasurer = FundSetting::current()->isTreasurer($request->user());
 
-        return Inertia::render('fund/Transaction', ['transaction' => $transaction, 'allocations' => $allocations, 'events' => $events, 'isTreasurer' => $treasurer, 'banks' => $treasurer ? Bank::query()->where('active', true)->orderBy('name')->get(['id', 'name']) : []]);
+        return Inertia::render('fund/Transaction', ['transaction' => $transaction, 'allocations' => $allocations, 'events' => $events, 'isTreasurer' => $treasurer, 'returnTo' => $this->returnTo($request), 'banks' => $treasurer ? Bank::query()->where('active', true)->orderBy('name')->get(['id', 'name']) : []]);
     }
 
     public function edit(Request $request, FundTransaction $transaction, FundContributions $contributions): Response
@@ -160,14 +169,14 @@ class FundTransactionController extends Controller
     {
         $transactions->approve($request->user(), (string) $request->validated('idempotency_key'), $transaction->id);
 
-        return to_route('fund.transactions.show', $transaction);
+        return to_route('fund.transactions.show', ['transaction' => $transaction->id, 'return_to' => $this->returnTo($request)]);
     }
 
     public function reject(FundCommandRequest $request, FundTransaction $transaction, FundTransactions $transactions): RedirectResponse
     {
         $transactions->reject($request->user(), (string) $request->validated('idempotency_key'), $transaction->id, (string) $request->validated('reason'));
 
-        return to_route('fund.transactions.show', $transaction);
+        return to_route('fund.transactions.show', ['transaction' => $transaction->id, 'return_to' => $this->returnTo($request)]);
     }
 
     public function correct(FundTransactionRequest $request, FundTransaction $transaction, FundTransactions $transactions): RedirectResponse
@@ -183,5 +192,22 @@ class FundTransactionController extends Controller
         abort_unless(FundTransaction::query()->where('evidence_id', $evidence->id)->exists() || Loan::query()->where('evidence_id', $evidence->id)->exists(), 404);
 
         return response()->download(Storage::disk('fund')->path($evidence->path), $evidence->original_name, ['Content-Type' => $evidence->mime]);
+    }
+
+    private function returnTo(Request $request): ?string
+    {
+        $returnTo = $request->query('return_to');
+        if (! is_string($returnTo) || ! FundSetting::current()->isTreasurer($request->user())) {
+            return null;
+        }
+        $parts = parse_url($returnTo);
+        if ($parts === false || isset($parts['scheme']) || isset($parts['host']) || ! in_array($parts['path'] ?? '', [
+            route('fund.treasury.contributions.index', absolute: false),
+            route('fund.treasury.reconciliation.index', absolute: false),
+        ], true)) {
+            return null;
+        }
+
+        return $returnTo;
     }
 }

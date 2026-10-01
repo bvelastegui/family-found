@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { ref } from 'vue';
-import { Head, Link, router } from '@inertiajs/vue3';
+import { Head, Link, router, usePage, setLayoutProps } from '@inertiajs/vue3';
+import { index as reconciliationIndex } from '@/routes/fund/treasury/reconciliation';
+import { index as treasuryIndex } from '@/routes/fund/treasury';
 import { dashboard } from '@/routes';
 import {
   index as transactionsIndex,
@@ -35,14 +37,21 @@ const props = defineProps<{
   transactions: Pagination<Transaction>;
   filters: { status: string; type: string; search: string };
   isTreasurer: boolean;
+  reconciliation: boolean;
 }>();
-defineOptions({
-  layout: {
-    breadcrumbs: [
-      { title: 'Inicio', href: dashboard() },
-      { title: 'Transacciones', href: transactionsIndex() },
-    ],
-  },
+const page = usePage();
+const listingRoute = props.reconciliation
+  ? reconciliationIndex
+  : transactionsIndex;
+const title = props.reconciliation ? 'Conciliación' : 'Mis transacciones';
+setLayoutProps({
+  breadcrumbs: [
+    { title: 'Inicio', href: dashboard() },
+    ...(props.reconciliation
+      ? [{ title: 'Tesorería', href: treasuryIndex() }]
+      : []),
+    { title, href: listingRoute() },
+  ],
 });
 
 const status = ref(props.filters.status);
@@ -55,9 +64,9 @@ const hasFilters =
 
 function filter(): void {
   router.get(
-    transactionsIndex().url,
+    listingRoute().url,
     {
-      ...(status.value ? { status: status.value } : {}),
+      status: status.value,
       ...(type.value ? { type: type.value } : {}),
       ...(search.value.trim() ? { search: search.value.trim() } : {}),
     },
@@ -68,28 +77,36 @@ function filter(): void {
 
 <template>
   <main class="mx-auto flex w-full max-w-6xl flex-col gap-6 p-4 md:p-8">
-    <Head title="Transacciones" />
+    <Head :title="title" />
     <header class="flex flex-wrap items-center justify-between gap-4">
       <div>
-        <p class="text-sm text-muted-foreground">Comprobantes y movimientos</p>
-        <h1 class="text-3xl font-semibold tracking-tight">Transacciones</h1>
+        <p class="text-sm text-muted-foreground">
+          {{ reconciliation ? 'Tesorería' : 'Mi cuenta' }}
+        </p>
+        <h1 class="text-3xl font-semibold tracking-tight">{{ title }}</h1>
         <p class="mt-1 text-muted-foreground">
-          Aportes y cuotas de préstamo, desde el registro hasta su conciliación.
+          {{
+            reconciliation
+              ? 'Revisa comprobantes y consulta las decisiones de todo el fondo.'
+              : 'Tus aportes y cuotas de préstamo, desde el registro hasta su aprobación.'
+          }}
         </p>
       </div>
-      <Button as-child
+      <Button
+        v-if="!reconciliation"
+        as-child
         ><Link :href="newTransaction()">Registrar transferencia</Link></Button
       >
     </header>
 
     <form
-      class="flex flex-wrap items-end gap-3 rounded-lg border bg-muted/20 p-4"
+      class="flex flex-wrap items-end gap-3"
       role="search"
       @submit.prevent="filter"
     >
       <div class="flex min-w-48 flex-1 flex-col gap-2">
         <Label for="transaction-search"
-          >Buscar comprobante o banco<span v-if="isTreasurer"
+          >Buscar comprobante o banco<span v-if="reconciliation"
             >, o participante</span
           ></Label
         ><Input
@@ -132,7 +149,7 @@ function filter(): void {
         v-if="hasFilters"
         variant="outline"
         as-child
-        ><Link :href="transactionsIndex()">Limpiar</Link></Button
+        ><Link :href="listingRoute()">Limpiar</Link></Button
       >
     </form>
 
@@ -160,7 +177,7 @@ function filter(): void {
           <caption class="sr-only">
             Transacciones y estado de conciliación
           </caption>
-          <thead class="bg-muted/50 text-muted-foreground">
+          <thead class="bg-muted/70 text-muted-foreground">
             <tr>
               <th
                 scope="col"
@@ -169,7 +186,7 @@ function filter(): void {
                 Fecha
               </th>
               <th
-                v-if="isTreasurer"
+                v-if="reconciliation"
                 scope="col"
                 class="px-4 py-3 font-medium"
               >
@@ -223,7 +240,7 @@ function filter(): void {
                 {{ fundDate(item.transaction_date) }}
               </td>
               <td
-                v-if="isTreasurer"
+                v-if="reconciliation"
                 class="px-4 py-3"
               >
                 {{ item.user.name }}
@@ -238,7 +255,12 @@ function filter(): void {
               <td class="px-4 py-3 text-right font-medium tabular-nums">
                 {{ usd(item.amount_cents) }}
               </td>
-              <td class="px-4 py-3"><FundStatus :status="item.status" /></td>
+              <td class="px-4 py-3">
+                <FundStatus
+                  :status="item.status"
+                  subtle
+                />
+              </td>
               <td class="px-4 py-3">
                 <template v-if="item.approved_by && item.approved_at"
                   ><span class="font-medium">{{ item.approved_by }}</span
@@ -253,7 +275,11 @@ function filter(): void {
               </td>
               <td class="px-4 py-3 text-right">
                 <Link
-                  :href="transactionShow(item.id)"
+                  :href="
+                    transactionShow(item.id, {
+                      query: reconciliation ? { return_to: page.url } : {},
+                    })
+                  "
                   :aria-label="`Ver comprobante ${item.reference}`"
                   class="font-medium underline underline-offset-4 focus-visible:ring-2 focus-visible:ring-ring"
                   >Abrir</Link

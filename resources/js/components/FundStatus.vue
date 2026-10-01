@@ -1,8 +1,21 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { Badge } from '@/components/ui/badge';
+import { CircleCheck, CircleX, Clock, Minus } from '@lucide/vue';
 
-const props = defineProps<{ status: string }>();
+const props = withDefaults(
+  defineProps<{ status: string; subtle?: boolean }>(),
+  { subtle: false },
+);
+const icon = computed(() =>
+  props.status === 'paid' || props.status === 'approved'
+    ? CircleCheck
+    : props.status === 'rejected'
+      ? CircleX
+      : props.status === 'not_applicable'
+        ? Minus
+        : Clock,
+);
 const label = computed(
   () =>
     ({
@@ -11,6 +24,7 @@ const label = computed(
       rejected: 'Rechazada',
       paid: 'Pagado',
       unpaid: 'Pendiente',
+      not_applicable: 'No aplica',
       upcoming: 'Próximo',
       unconfigured: 'Sin cuota',
       before_start: 'Antes del inicio',
@@ -36,5 +50,11 @@ const variant = computed(() =>
 </script>
 
 <template>
-  <Badge :variant="variant">{{ label }}</Badge>
+  <Badge :variant="subtle ? 'outline' : variant"
+    ><component
+      :is="icon"
+      v-if="subtle"
+      aria-hidden="true"
+    />{{ label }}</Badge
+  >
 </template>

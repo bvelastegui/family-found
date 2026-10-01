@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import { Head, Link, useForm } from '@inertiajs/vue3';
+import { Head, Link, useForm, setLayoutProps } from '@inertiajs/vue3';
 import { dashboard } from '@/routes';
 import {
   index as transactionsIndex,
@@ -63,14 +63,20 @@ const props = defineProps<{
   allocations: Allocation[];
   events: Event[];
   isTreasurer: boolean;
+  returnTo: string | null;
 }>();
-defineOptions({
-  layout: {
-    breadcrumbs: [
-      { title: 'Inicio', href: dashboard() },
-      { title: 'Transacciones', href: transactionsIndex() },
-    ],
-  },
+const returnQuery = computed(() =>
+  props.returnTo ? { return_to: props.returnTo } : {},
+);
+setLayoutProps({
+  breadcrumbs: [
+    { title: 'Inicio', href: dashboard() },
+    {
+      title: props.returnTo ? 'Tesorería' : 'Mis transacciones',
+      href: props.returnTo ?? transactionsIndex().url,
+    },
+    { title: `Comprobante #${props.transaction.id}` },
+  ],
 });
 const approval = useForm({ idempotency_key: operationKey() });
 const rejection = useForm({ idempotency_key: operationKey(), reason: '' });
@@ -214,7 +220,11 @@ function reason(event: Event): string | null {
         </CardDescription>
       </CardHeader>
       <CardContent class="flex flex-col items-start gap-4">
-        <form @submit.prevent="approval.post(approve(transaction.id).url)">
+        <form
+          @submit.prevent="
+            approval.post(approve(transaction.id, { query: returnQuery }).url)
+          "
+        >
           <Button :disabled="approval.processing || rejection.processing">
             Aprobar y contabilizar
           </Button>
@@ -240,7 +250,9 @@ function reason(event: Event): string | null {
           v-if="showingRejection"
           id="rejection-form"
           class="flex w-full flex-col items-start gap-3 rounded-lg border p-4"
-          @submit.prevent="rejection.post(reject(transaction.id).url)"
+          @submit.prevent="
+            rejection.post(reject(transaction.id, { query: returnQuery }).url)
+          "
         >
           <div>
             <p class="font-medium">Rechazar comprobante</p>
@@ -366,9 +378,9 @@ function reason(event: Event): string | null {
         </p></CardContent
       ></Card
     ><Link
-      :href="transactionsIndex()"
+      :href="returnTo ?? transactionsIndex().url"
       class="text-sm underline underline-offset-4"
-      >Volver al historial</Link
+      >{{ returnTo ? 'Volver al listado' : 'Volver a mis transacciones' }}</Link
     >
   </main>
 </template>

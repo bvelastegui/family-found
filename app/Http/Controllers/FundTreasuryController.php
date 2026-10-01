@@ -4,12 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Actions\Fund\FundBalances;
 use App\Actions\Fund\TreasuryContributions;
-use App\Enums\LoanStatus;
 use App\Enums\TransactionStatus;
 use App\Models\ContributionPeriod;
 use App\Models\FundSetting;
 use App\Models\FundTransaction;
-use App\Models\Loan;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -21,17 +19,29 @@ class FundTreasuryController extends Controller
     {
         abort_unless(FundSetting::current()->isTreasurer($request->user()), 403);
         $today = CarbonImmutable::now('America/Guayaquil');
-        $period = ContributionPeriod::query()->where('month', $today->startOfMonth()->toDateString())->first();
 
         return Inertia::render('fund/Treasury', [
-            'pending' => FundTransaction::query()->where('status', TransactionStatus::Pending)->with('user:id,name')
-                ->orderBy('created_at')->orderBy('id')->paginate(15),
-            'reservedLoans' => Loan::query()->where('status', LoanStatus::Reserved)->with('user:id,name')
-                ->orderBy('created_at')->orderBy('id')->limit(6)->get(),
+            'pendingCount' => FundTransaction::query()->where('status', TransactionStatus::Pending)->count(),
             'balances' => $balances->summary(),
             'contributionChart' => $contributions->chart($today),
-            'contributionMonth' => $period?->month->format('Y-m'),
-            'unpaid' => $period !== null && $today->day > 5 ? $contributions->unpaid($period) : null,
+        ]);
+    }
+
+    public function contributions(Request $request, TreasuryContributions $contributions): Response
+    {
+        abort_unless(FundSetting::current()->isTreasurer($request->user()), 403);
+        $validated = $request->validate([
+            'month' => ['sometimes', 'date_format:Y-m'],
+            'status' => ['sometimes', 'nullable', 'in:paid,pending,unpaid,not_applicable'],
+        ]);
+        $month = $validated['month'] ?? CarbonImmutable::now('America/Guayaquil')->format('Y-m');
+        $status = $validated['status'] ?? '';
+        $period = ContributionPeriod::query()->where('month', $month.'-01')->first();
+
+        return Inertia::render('fund/TreasuryContributions', [
+            'participants' => $period === null ? null : $contributions->participants($period, $status),
+            'filters' => ['month' => $month, 'status' => $status],
+            'amountCents' => $period?->amount_cents,
         ]);
     }
 }

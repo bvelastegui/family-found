@@ -28,6 +28,8 @@ import { index as contributionsIndex } from '@/routes/fund/contributions';
 import { index as transactionsIndex } from '@/routes/fund/transactions';
 import { index as loansIndex } from '@/routes/fund/loans';
 import { index as treasuryIndex } from '@/routes/fund/treasury';
+import { index as treasuryContributionsIndex } from '@/routes/fund/treasury/contributions';
+import { index as reconciliationIndex } from '@/routes/fund/treasury/reconciliation';
 import { index as periodsIndex } from '@/routes/fund/contribution-periods';
 import { index as banksIndex } from '@/routes/fund/banks';
 import { index as participantsIndex } from '@/routes/fund/treasury/participants';
@@ -50,13 +52,13 @@ const mainNavItems = computed<NavItem[]>(() => {
       isActive: url === dashboard().url,
     },
     {
-      title: 'Aportes',
+      title: 'Mis aportes',
       href: contributionsIndex(),
       icon: CalendarDays,
       isActive: url.startsWith(contributionsIndex().url),
     },
     {
-      title: 'Transacciones',
+      title: 'Mis transacciones',
       href: transactionsIndex(),
       icon: ReceiptText,
       isActive: url.startsWith(transactionsIndex().url),
@@ -72,6 +74,18 @@ const treasuryNavItems = computed<NavItem[]>(() => {
       href: treasuryIndex(),
       icon: ClipboardCheck,
       isActive: url === treasuryIndex().url,
+    },
+    {
+      title: 'Conciliación',
+      href: reconciliationIndex(),
+      icon: ClipboardCheck,
+      isActive: url === reconciliationIndex().url,
+    },
+    {
+      title: 'Aportes',
+      href: treasuryContributionsIndex(),
+      icon: CalendarDays,
+      isActive: url === treasuryContributionsIndex().url,
     },
     {
       title: 'Préstamos',
@@ -125,7 +139,7 @@ const name = usePage().props.name;
 
     <SidebarContent>
       <NavMain
-        label="Menú principal"
+        label="Mi cuenta"
         :items="mainNavItems"
       />
       <NavMain

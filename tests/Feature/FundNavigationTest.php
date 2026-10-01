@@ -106,7 +106,13 @@ test('only the treasurer can open the dedicated loan reservation screen', functi
             ->has('users', 2));
     $this->actingAs($member)->get(route('fund.loans.index'))
         ->assertInertia(fn (Assert $page) => $page->component('fund/Loans')->where('isTreasurer', false)
-            ->missing('users')->missing('banks'));
+            ->where('reservedLoans', null)->missing('users')->missing('banks'));
+    $loanId = app(FundLoans::class)->reserve($treasurer, (string) Str::uuid(), [
+        'user_id' => $member->id, 'amount' => '20.00', 'monthly_rate' => '2.00', 'term_months' => 2,
+    ]);
+    $this->actingAs($treasurer)->get(route('fund.loans.index'))->assertInertia(fn (Assert $page) => $page
+        ->component('fund/Loans')->where('reservedLoans.total', 1)->where('reservedLoans.data.0.id', $loanId)
+        ->where('reservedLoans.data.0.principal_cents', 2000));
 });
 
 test('disbursement correction gets its own treasury form and explains dependent payments before editing', function () {
@@ -167,6 +173,8 @@ test('transaction history filters by status and destination without exposing ano
         ->assertInertia(fn (Assert $page) => $page->component('fund/Transactions')->has('transactions.data', 1)
             ->where('transactions.data.0.reference', 'NAV-OWN')->where('filters.status', 'pending'));
     $this->actingAs($treasurer)->get(route('fund.transactions.index', ['status' => 'pending']))
+        ->assertInertia(fn (Assert $page) => $page->component('fund/Transactions')->has('transactions.data', 0));
+    $this->actingAs($treasurer)->get(route('fund.treasury.reconciliation.index', ['status' => 'pending']))
         ->assertInertia(fn (Assert $page) => $page->component('fund/Transactions')->has('transactions.data', 2));
     $this->actingAs($member)->get(route('fund.transactions.index', ['status' => 'unknown']))->assertNotFound();
 });
@@ -182,7 +190,7 @@ test('treasury and correction screens remain protected after treasurer handover'
 
     $this->actingAs($member)->get(route('fund.treasury.index'))->assertForbidden();
     $this->actingAs($administrator)->get(route('fund.treasury.index'))->assertInertia(fn (Assert $page) => $page
-        ->component('fund/Treasury')->has('pending.data', 1)->where('balances.cash', 0));
+        ->component('fund/Treasury')->where('pendingCount', 1)->where('balances.cash', 0));
     $this->actingAs($administrator)->get(route('fund.transactions.edit', $transaction))->assertStatus(409);
     app(FundTransactions::class)->approve($administrator, (string) Str::uuid(), $transaction);
     $this->actingAs($administrator)->get(route('fund.transactions.edit', $transaction))->assertInertia(fn (Assert $page) => $page
@@ -191,8 +199,12 @@ test('treasury and correction screens remain protected after treasurer handover'
 
     app(FundAdministration::class)->treasurer($administrator, (string) Str::uuid(), $member->id);
     $this->actingAs($administrator)->get(route('fund.treasury.index'))->assertForbidden();
+    $this->actingAs($administrator)->get(route('fund.treasury.contributions.index'))->assertForbidden();
+    $this->actingAs($administrator)->get(route('fund.treasury.reconciliation.index'))->assertForbidden();
     $this->actingAs($administrator)->get(route('fund.treasury.participants.index'))->assertForbidden();
     $this->actingAs($member)->get(route('fund.treasury.index'))->assertOk();
+    $this->actingAs($member)->get(route('fund.treasury.contributions.index'))->assertOk();
+    $this->actingAs($member)->get(route('fund.treasury.reconciliation.index'))->assertOk();
     $this->actingAs($administrator)->get(route('dashboard'))->assertInertia(fn (Assert $page) => $page
         ->component('Dashboard')->where('fundRoles.administrator', true)->where('fundRoles.treasurer', false));
     $this->actingAs($member)->get(route('dashboard'))->assertInertia(fn (Assert $page) => $page

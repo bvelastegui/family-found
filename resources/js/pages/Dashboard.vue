@@ -7,7 +7,7 @@ import {
 } from '@/routes/fund/transactions';
 import { index as contributionsIndex } from '@/routes/fund/contributions';
 import { index as loansIndex, show as loanShow } from '@/routes/fund/loans';
-import { index as treasuryIndex } from '@/routes/fund/treasury';
+import { index as reconciliationIndex } from '@/routes/fund/treasury/reconciliation';
 import {
   Card,
   CardContent,
@@ -124,8 +124,8 @@ defineProps<{
         <template #footer
           ><Link
             class="text-sm font-medium underline underline-offset-4"
-            :href="treasuryIndex()"
-            >Abrir Tesorería</Link
+            :href="reconciliationIndex()"
+            >Abrir conciliación</Link
           ></template
         >
       </FundStatCard>

@@ -26,6 +26,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/', fn () => to_route('dashboard'))->name('index');
         Route::get('contributions', [FundContributionController::class, 'index'])->name('contributions.index');
         Route::get('treasury', [FundTreasuryController::class, 'index'])->name('treasury.index');
+        Route::get('treasury/contributions', [FundTreasuryController::class, 'contributions'])->name('treasury.contributions.index');
+        Route::get('treasury/reconciliation', [FundTransactionController::class, 'reconciliation'])->name('treasury.reconciliation.index');
         Route::get('notifications', [FundNotificationController::class, 'index'])->name('notifications.index');
         Route::patch('notifications/read', [FundNotificationController::class, 'readAll'])->name('notifications.read-all');
         Route::patch('notifications/{notification}/read', [FundNotificationController::class, 'read'])->name('notifications.read');

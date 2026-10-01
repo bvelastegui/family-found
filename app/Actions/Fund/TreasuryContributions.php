@@ -7,7 +7,6 @@ use App\Models\ContributionPeriod;
 use App\Models\User;
 use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
-use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Facades\DB;
 
 class TreasuryContributions
@@ -44,38 +43,38 @@ class TreasuryContributions
     }
 
     /**
-     * @return LengthAwarePaginator<int, array{id: int, name: string, email: string, pending_transaction_id: int|null}>
+     * @return LengthAwarePaginator<int, array{id: int, name: string, email: string, expected_cents: int, approved_cents: int, pending_cents: int, status: string, transaction_id: int|null}>
      */
-    public function unpaid(ContributionPeriod $period): LengthAwarePaginator
+    public function participants(ContributionPeriod $period, string $status = ''): LengthAwarePaginator
     {
         $cutoff = $this->registrationCutoff($period);
+        $allocations = DB::table('transaction_allocations as allocation')
+            ->join('fund_transactions as transaction', 'transaction.id', '=', 'allocation.fund_transaction_id')
+            ->where('allocation.contribution_period_id', $period->id)
+            ->whereNull('transaction.superseded_by_id')
+            ->groupBy('transaction.user_id')->select('transaction.user_id')
+            ->selectRaw('SUM(CASE WHEN transaction.status = ? THEN allocation.amount_cents ELSE 0 END) as approved_cents', [TransactionStatus::Approved->value])
+            ->selectRaw('MAX(CASE WHEN transaction.status = ? THEN transaction.id END) as approved_id', [TransactionStatus::Approved->value])
+            ->selectRaw('MAX(CASE WHEN transaction.status = ? THEN transaction.id END) as pending_id', [TransactionStatus::Pending->value]);
+        $participants = DB::table('users')->leftJoinSub($allocations, 'payments', 'payments.user_id', '=', 'users.id')
+            ->select('users.id', 'users.name', 'users.email', 'payments.approved_id', 'payments.pending_id')
+            ->selectRaw('COALESCE(payments.approved_cents, 0) as approved_cents')
+            ->selectRaw('CASE WHEN users.created_at < ? THEN ? ELSE 0 END as expected_cents', [$cutoff, $period->amount_cents])
+            ->selectRaw('CASE WHEN users.created_at >= ? THEN ? WHEN COALESCE(payments.approved_cents, 0) >= ? THEN ? WHEN payments.pending_id IS NOT NULL THEN ? ELSE ? END as status', [$cutoff, 'not_applicable', $period->amount_cents, 'paid', 'pending', 'unpaid']);
 
-        return User::query()->select('users.id', 'users.name', 'users.email')
-            ->addSelect(['pending_transaction_id' => DB::table('fund_transactions as pending')
-                ->join('transaction_allocations as pending_allocation', 'pending_allocation.fund_transaction_id', '=', 'pending.id')
-                ->select('pending.id')
-                ->whereColumn('pending.user_id', 'users.id')
-                ->where('pending.status', TransactionStatus::Pending->value)
-                ->where('pending_allocation.contribution_period_id', $period->id)
-                ->orderByDesc('pending.id')->limit(1)])
-            ->where('users.created_at', '<', $cutoff)
-            ->whereNotExists(fn (Builder $query) => $query->selectRaw('1')
-                ->from('transaction_allocations as paid_allocation')
-                ->join('fund_transactions as paid', 'paid.id', '=', 'paid_allocation.fund_transaction_id')
-                ->whereColumn('paid.user_id', 'users.id')
-                ->where('paid_allocation.contribution_period_id', $period->id)
-                ->where('paid.status', TransactionStatus::Approved->value)
-                ->whereNull('paid.superseded_by_id'))
-            ->orderBy('users.name')->orderBy('users.id')
-            ->paginate(10, ['*'], 'unpaid_page')
-            ->through(function (User $user): array {
-                $pendingId = $user->getAttribute('pending_transaction_id');
+        return DB::query()->fromSub($participants, 'participants')
+            ->when($status !== '', fn ($query) => $query->where('status', $status))
+            ->orderBy('name')->orderBy('id')->paginate(15)->withQueryString()
+            ->through(function (object $person): array {
+                $expected = (int) $person->expected_cents;
+                $approved = (int) $person->approved_cents;
+                $transactionId = $person->pending_id ?? $person->approved_id;
 
                 return [
-                    'id' => $user->id,
-                    'name' => $user->name,
-                    'email' => $user->email,
-                    'pending_transaction_id' => $pendingId === null ? null : (int) $pendingId,
+                    'id' => (int) $person->id, 'name' => $person->name, 'email' => $person->email,
+                    'expected_cents' => $expected, 'approved_cents' => $approved,
+                    'pending_cents' => max(0, $expected - $approved), 'status' => $person->status,
+                    'transaction_id' => $transactionId === null ? null : (int) $transactionId,
                 ];
             });
     }

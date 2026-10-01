@@ -26,12 +26,14 @@ class FundLoanController extends Controller
         $treasurer = FundSetting::current()->isTreasurer($request->user());
 
         return Inertia::render('fund/Loans', [
-            'loans' => Loan::query()->when(! $treasurer, fn ($query) => $query->where('user_id', $request->user()->id))->with('user:id,name')->latest('id')->paginate(15)->through(function (Loan $loan) use ($balances): Loan {
+            'loans' => Loan::query()->when(! $treasurer, fn ($query) => $query->where('user_id', $request->user()->id))->with('user:id,name')->latest('id')->paginate(15)->withQueryString()->through(function (Loan $loan) use ($balances): Loan {
                 $loan->setAttribute('outstanding_cents', $balances->account(JournalAccount::LoanPrincipal, loanId: $loan->id));
 
                 return $loan;
             }),
             'isTreasurer' => $treasurer,
+            'reservedLoans' => $treasurer ? Loan::query()->where('status', LoanStatus::Reserved)->with('user:id,name')
+                ->orderBy('created_at')->orderBy('id')->paginate(10, ['*'], 'reserved_page')->withQueryString() : null,
         ]);
     }
 

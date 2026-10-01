@@ -53,6 +53,7 @@ export function paginatorLabel(label: string): string {
 export type FundPagination<T> = {
   data: T[];
   last_page: number;
+  current_page: number;
   total: number;
   links: { url: string | null; label: string; active: boolean }[];
 };
