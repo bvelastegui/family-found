@@ -10,7 +10,7 @@ defineOptions({
   layout: {
     title: 'Unirse al Fondo Familiar',
     description:
-      'Completa tu cuenta utilizando la invitación que recibiste por correo.',
+      'Completa tu cuenta con la invitación que recibiste por correo.',
   },
 });
 defineProps<{ email: string; invitationId: number; acceptUrl: string }>();

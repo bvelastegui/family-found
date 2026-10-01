@@ -7,6 +7,20 @@ import { initializeFlashToast } from '@/lib/flashToast';
 import '@/lib/pwa';
 
 const appName = 'Fondo Familiar';
+const translations: Record<string, string> = {
+  'Delete account': 'Eliminar cuenta',
+  'Delete your account and all of its resources':
+    'Elimina tu cuenta y todos sus datos',
+  Warning: 'Advertencia',
+  'Please proceed with caution, this cannot be undone.':
+    'Continúa con precaución. Esta acción no se puede deshacer.',
+  'Are you sure you want to delete your account?':
+    '¿Seguro que quieres eliminar tu cuenta?',
+  'Once your account is deleted, all of its resources and data will also be permanently deleted. Please enter your password to confirm you would like to permanently delete your account.':
+    'Al eliminar tu cuenta, también se borrarán permanentemente todos tus datos. Escribe tu contraseña para confirmar la eliminación.',
+  Password: 'Contraseña',
+  Cancel: 'Cancelar',
+};
 
 void createInertiaApp({
   title: (title) => (title ? `${title} - ${appName}` : appName),
@@ -21,6 +35,8 @@ void createInertiaApp({
     }
   },
   withApp: (app) => {
+    app.config.globalProperties.__ = (key: string): string =>
+      translations[key] ?? key;
     app.directive('focus', {
       mounted: (el: HTMLElement, shouldFocus) => {
         if (shouldFocus.value !== false) {

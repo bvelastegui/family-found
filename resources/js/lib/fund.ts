@@ -46,6 +46,10 @@ export function fundDateTime(timestamp: string): string {
   }).format(date);
 }
 
+export function paginatorLabel(label: string): string {
+  return label.replace('Previous', 'Anterior').replace('Next', 'Siguiente');
+}
+
 export type FundPagination<T> = {
   data: T[];
   last_page: number;

@@ -18,6 +18,7 @@ declare module '@inertiajs/core' {
   export interface InertiaConfig {
     sharedPageProps: {
       name: string;
+      locale: string;
       auth: Auth;
       sidebarOpen: boolean;
       [key: string]: unknown;
@@ -34,5 +35,6 @@ declare module 'vue' {
     $inertia: typeof Router;
     $page: Page;
     $headManager: ReturnType<typeof createHeadManager>;
+    __: (key: string) => string;
   }
 }

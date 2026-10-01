@@ -27,7 +27,7 @@ class FundInvitationNotification extends Notification
         return (new MailMessage)
             ->subject('Invitación al Fondo Familiar')
             ->greeting('Te han invitado al Fondo Familiar')
-            ->line('El tesorero te invita a unirte al fondo. Este enlace personal vence en siete días y solo puede usarse una vez.')
+            ->line('Te invitamos a unirte al Fondo Familiar. Este enlace personal vence en siete días y solo puede usarse una vez.')
             ->action('Aceptar invitación', $this->invitationUrl)
             ->line('Si no esperabas esta invitación, puedes ignorar este mensaje.');
     }

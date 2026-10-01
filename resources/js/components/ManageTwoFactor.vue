@@ -34,8 +34,8 @@ onUnmounted(() => clearTwoFactorAuthData());
   >
     <Heading
       variant="small"
-      title="Two-factor authentication"
-      description="Manage your two-factor authentication settings"
+      title="Autenticación en dos pasos"
+      description="Administra la autenticación en dos pasos de tu cuenta"
     />
 
     <div
@@ -43,9 +43,9 @@ onUnmounted(() => clearTwoFactorAuthData());
       class="flex flex-col items-start justify-start space-y-4"
     >
       <p class="text-sm text-muted-foreground">
-        When you enable two-factor authentication, you will be prompted for a
-        secure pin during login. This pin can be retrieved from a TOTP-supported
-        application on your phone.
+        Al activar la autenticación en dos pasos, se te pedirá un código seguro
+        al iniciar sesión. Puedes obtenerlo en una aplicación de autenticación
+        compatible con TOTP en tu teléfono.
       </p>
 
       <div>
@@ -53,7 +53,7 @@ onUnmounted(() => clearTwoFactorAuthData());
           v-if="hasSetupData"
           @click="showSetupModal = true"
         >
-          <ShieldCheck />Continue setup
+          <ShieldCheck />Continuar configuración
         </Button>
         <Form
           v-else
@@ -65,7 +65,7 @@ onUnmounted(() => clearTwoFactorAuthData());
             type="submit"
             :disabled="processing"
           >
-            Enable 2FA
+            Activar autenticación en dos pasos
           </Button>
         </Form>
       </div>
@@ -76,8 +76,8 @@ onUnmounted(() => clearTwoFactorAuthData());
       class="flex flex-col items-start justify-start space-y-4"
     >
       <p class="text-sm text-muted-foreground">
-        You will be prompted for a secure, random pin during login, which you
-        can retrieve from the TOTP-supported application on your phone.
+        Se te pedirá un código seguro al iniciar sesión. Puedes obtenerlo en la
+        aplicación de autenticación compatible con TOTP de tu teléfono.
       </p>
 
       <div class="relative inline">
@@ -90,7 +90,7 @@ onUnmounted(() => clearTwoFactorAuthData());
             type="submit"
             :disabled="processing"
           >
-            Disable 2FA
+            Desactivar autenticación en dos pasos
           </Button>
         </Form>
       </div>

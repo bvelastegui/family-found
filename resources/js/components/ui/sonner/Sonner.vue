@@ -1,4 +1,5 @@
 <script lang="ts" setup>
+import { usePage } from '@inertiajs/vue3'
 import type { ToasterProps } from "vue-sonner"
 import { CircleCheckIcon, InfoIcon, Loader2Icon, OctagonXIcon, TriangleAlertIcon, XIcon } from "@lucide/vue"
 import { Toaster as Sonner } from "vue-sonner"
@@ -7,6 +8,8 @@ import { cn } from "@/lib/utils"
 import 'vue-sonner/style.css';
 
 const props = defineProps<ToasterProps>()
+const page = usePage<{ locale?: string }>()
+const locale = page.props.locale ?? 'es'
 </script>
 
 <template>
@@ -18,7 +21,15 @@ const props = defineProps<ToasterProps>()
       '--normal-border': 'var(--border)',
       '--border-radius': 'var(--radius)',
     }"
-    v-bind="props"
+    v-bind="{
+      ...props,
+      containerAriaLabel: locale === 'es' ? 'Notificaciones' : 'Notifications',
+      toastOptions: {
+        ...props.toastOptions,
+        closeButtonAriaLabel:
+          locale === 'es' ? 'Cerrar notificación' : 'Close notification',
+      },
+    }"
   >
     <template #success-icon>
       <CircleCheckIcon class="size-4" />

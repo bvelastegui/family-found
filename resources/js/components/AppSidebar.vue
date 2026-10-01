@@ -125,7 +125,7 @@ const name = usePage().props.name;
 
     <SidebarContent>
       <NavMain
-        label="General"
+        label="Menú principal"
         :items="mainNavItems"
       />
       <NavMain

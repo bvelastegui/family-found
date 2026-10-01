@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3';
+import { paginatorLabel } from '@/lib/fund';
 
 defineProps<{
   links: { url: string | null; label: string; active: boolean }[];
@@ -7,7 +8,9 @@ defineProps<{
   lastPage: number;
 }>();
 const text = (label: string): string =>
-  label.replace(/&laquo;|&raquo;/g, '').trim();
+  paginatorLabel(label)
+    .replace(/&laquo;|&raquo;/g, '')
+    .trim();
 </script>
 
 <template>

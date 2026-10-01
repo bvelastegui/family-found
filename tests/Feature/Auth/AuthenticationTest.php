@@ -22,6 +22,17 @@ test('users can authenticate using the login screen', function () {
     $response->assertRedirect(route('dashboard', absolute: false));
 });
 
+test('invalid login credentials return a localized validation message', function () {
+    $response = $this->post(route('login.store'), [
+        'email' => 'no-existe@example.com',
+        'password' => 'incorrecta',
+    ]);
+
+    $response->assertSessionHasErrors([
+        'email' => 'Estas credenciales no coinciden con nuestros registros.',
+    ]);
+});
+
 test('users with two factor enabled are redirected to two factor challenge', function () {
     $this->skipUnlessFortifyHas(Features::twoFactorAuthentication());
 

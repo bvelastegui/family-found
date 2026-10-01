@@ -46,26 +46,27 @@ const pinInputContainerRef = useTemplateRef('pinInputContainerRef');
 const modalConfig = computed<TwoFactorConfigContent>(() => {
   if (props.twoFactorEnabled) {
     return {
-      title: 'Two-factor authentication enabled',
+      title: 'Autenticación en dos pasos activada',
       description:
-        'Two-factor authentication is now enabled. Scan the QR code or enter the setup key in your authenticator app.',
-      buttonText: 'Close',
+        'La autenticación en dos pasos está activada. Escanea el código QR o escribe la clave de configuración en tu aplicación de autenticación.',
+      buttonText: 'Cerrar',
     };
   }
 
   if (showVerificationStep.value) {
     return {
-      title: 'Verify authentication code',
-      description: 'Enter the 6-digit code from your authenticator app',
-      buttonText: 'Continue',
+      title: 'Verificar código de autenticación',
+      description:
+        'Escribe el código de 6 dígitos de tu aplicación de autenticación',
+      buttonText: 'Continuar',
     };
   }
 
   return {
-    title: 'Enable two-factor authentication',
+    title: 'Activar autenticación en dos pasos',
     description:
-      'To finish enabling two-factor authentication, scan the QR code or enter the setup key in your authenticator app',
-    buttonText: 'Continue',
+      'Para terminar, escanea el código QR o escribe la clave de configuración en tu aplicación de autenticación.',
+    buttonText: 'Continuar',
   };
 });
 
@@ -196,7 +197,7 @@ watch(
             <div class="relative flex w-full items-center justify-center">
               <div class="absolute inset-0 top-1/2 h-px w-full bg-border" />
               <span class="relative bg-card px-2 py-1"
-                >or, enter the code manually</span
+                >o escribe el código manualmente</span
               >
             </div>
 
@@ -283,14 +284,14 @@ watch(
                   @click="showVerificationStep = false"
                   :disabled="processing"
                 >
-                  Back
+                  Volver
                 </Button>
                 <Button
                   type="submit"
                   class="w-auto flex-1"
                   :disabled="processing || code.length < 6"
                 >
-                  Confirm
+                  Confirmar
                 </Button>
               </div>
             </div>
