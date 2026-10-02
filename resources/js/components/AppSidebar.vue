@@ -10,6 +10,7 @@ import {
   UsersRound,
   Wallet,
   Galaxy,
+  ShieldCheck,
 } from '@lucide/vue';
 import { computed } from 'vue';
 import NavMain from '@/components/NavMain.vue';
@@ -33,13 +34,17 @@ import { index as reconciliationIndex } from '@/routes/fund/treasury/reconciliat
 import { index as periodsIndex } from '@/routes/fund/contribution-periods';
 import { index as banksIndex } from '@/routes/fund/banks';
 import { index as participantsIndex } from '@/routes/fund/treasury/participants';
+import {
+  index as auditIndex,
+  controls as auditControls,
+} from '@/routes/fund/audit';
 import type { NavItem } from '@/types';
 
 const page = usePage();
 const roles = computed(
   () =>
     page.props.fundRoles as
-      | { treasurer: boolean; administrator: boolean }
+      | { treasurer: boolean; administrator: boolean; auditor: boolean }
       | undefined,
 );
 const mainNavItems = computed<NavItem[]>(() => {
@@ -114,6 +119,23 @@ const treasuryNavItems = computed<NavItem[]>(() => {
   ];
 });
 const name = usePage().props.name;
+const auditNavItems = computed<NavItem[]>(() => {
+  const url = page.url.split('?')[0];
+  return [
+    {
+      title: 'Trazabilidad',
+      href: auditIndex(),
+      icon: ReceiptText,
+      isActive: url.startsWith(auditIndex().url) && url !== auditControls().url,
+    },
+    {
+      title: 'Controles',
+      href: auditControls(),
+      icon: ShieldCheck,
+      isActive: url === auditControls().url,
+    },
+  ];
+});
 </script>
 
 <template>
@@ -146,6 +168,11 @@ const name = usePage().props.name;
         v-if="roles?.treasurer"
         label="Tesorería"
         :items="treasuryNavItems"
+      />
+      <NavMain
+        v-if="roles?.auditor"
+        label="Auditoría"
+        :items="auditNavItems"
       />
     </SidebarContent>
 

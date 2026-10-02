@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\FundAuditController;
 use App\Http\Controllers\FundConfigurationController;
 use App\Http\Controllers\FundContributionController;
 use App\Http\Controllers\FundController;
@@ -28,6 +29,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('treasury', [FundTreasuryController::class, 'index'])->name('treasury.index');
         Route::get('treasury/contributions', [FundTreasuryController::class, 'contributions'])->name('treasury.contributions.index');
         Route::get('treasury/reconciliation', [FundTransactionController::class, 'reconciliation'])->name('treasury.reconciliation.index');
+        Route::get('audit', [FundAuditController::class, 'index'])->name('audit.index');
+        Route::get('audit/controls', [FundAuditController::class, 'controls'])->name('audit.controls');
+        Route::get('audit/events/{event}', [FundAuditController::class, 'event'])->whereNumber('event')->name('audit.events.show');
+        Route::get('audit/transactions/{transaction}', [FundAuditController::class, 'transaction'])->name('audit.transactions.show');
+        Route::get('audit/loans/{loan}', [FundAuditController::class, 'loan'])->name('audit.loans.show');
+        Route::get('audit/entries/{entry}', [FundAuditController::class, 'entry'])->whereNumber('entry')->name('audit.entries.show');
         Route::get('notifications', [FundNotificationController::class, 'index'])->name('notifications.index');
         Route::patch('notifications/read', [FundNotificationController::class, 'readAll'])->name('notifications.read-all');
         Route::patch('notifications/{notification}/read', [FundNotificationController::class, 'read'])->name('notifications.read');

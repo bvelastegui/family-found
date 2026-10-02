@@ -11,10 +11,11 @@ use Illuminate\Database\Eloquent\Model;
  * @property int $id
  * @property int $administrator_id
  * @property int|null $treasurer_id
+ * @property int|null $auditor_id
  * @property string $currency
  * @property string $timezone
  */
-#[Fillable(['id', 'administrator_id', 'treasurer_id', 'currency', 'timezone'])]
+#[Fillable(['id', 'administrator_id', 'treasurer_id', 'auditor_id', 'currency', 'timezone'])]
 class FundSetting extends Model
 {
     /** @use HasFactory<FundSettingFactory> */
@@ -35,9 +36,14 @@ class FundSetting extends Model
         return $this->administrator_id === $user->id;
     }
 
+    public function isAuditor(User $user): bool
+    {
+        return $this->auditor_id === $user->id;
+    }
+
     /** @return array<string, string> */
     protected function casts(): array
     {
-        return ['administrator_id' => 'integer', 'treasurer_id' => 'integer'];
+        return ['administrator_id' => 'integer', 'treasurer_id' => 'integer', 'auditor_id' => 'integer'];
     }
 }

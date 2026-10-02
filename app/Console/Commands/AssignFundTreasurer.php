@@ -9,6 +9,7 @@ use Illuminate\Console\Attributes\Description;
 use Illuminate\Console\Attributes\Signature;
 use Illuminate\Console\Command;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 
 #[Signature('fund:assign-treasurer {name : Nombre completo o parte del nombre del usuario}')]
 #[Description('Busca un usuario por nombre y lo designa tesorero del fondo')]
@@ -52,7 +53,13 @@ class AssignFundTreasurer extends Command
 
         $fund = FundSetting::current();
         $administrator = User::query()->findOrFail($fund->administrator_id);
-        $administration->treasurer($administrator, (string) Str::uuid(), $chosen->id);
+        try {
+            $administration->treasurer($administrator, (string) Str::uuid(), $chosen->id);
+        } catch (ValidationException $exception) {
+            $this->error($exception->errors()['user_id'][0]);
+
+            return self::FAILURE;
+        }
         $this->info("Tesorero designado: {$chosen->name} <{$chosen->email}>.");
 
         return self::SUCCESS;

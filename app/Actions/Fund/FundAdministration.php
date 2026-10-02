@@ -16,6 +16,9 @@ class FundAdministration
     {
         return $this->operations->handle($actor, 'treasurer.designate', $key, ['user_id' => $userId], function (FundSetting $fund) use ($actor, $userId): int {
             User::query()->findOrFail($userId);
+            if ($fund->auditor_id === $userId) {
+                throw ValidationException::withMessages(['user_id' => 'El auditor no puede ser tesorero al mismo tiempo.']);
+            }
             $previous = $fund->treasurer_id;
             $fund->update(['treasurer_id' => $userId]);
             $this->events->handle($actor, 'treasurer.designated', 'fund', 1, ['previous_id' => $previous, 'treasurer_id' => $userId]);
@@ -40,5 +43,20 @@ class FundAdministration
 
             return $bank->id;
         }, 'treasurer');
+    }
+
+    public function auditor(User $actor, string $key, int $userId): int
+    {
+        return $this->operations->handle($actor, 'auditor.designate', $key, ['user_id' => $userId], function (FundSetting $fund) use ($actor, $userId): int {
+            User::query()->findOrFail($userId);
+            if ($fund->treasurer_id === $userId) {
+                throw ValidationException::withMessages(['user_id' => 'El tesorero no puede auditar sus propias operaciones.']);
+            }
+            $previous = $fund->auditor_id;
+            $fund->update(['auditor_id' => $userId]);
+            $this->events->handle($actor, 'auditor.designated', 'fund', 1, ['previous_id' => $previous, 'auditor_id' => $userId]);
+
+            return $userId;
+        }, 'administrator');
     }
 }

@@ -49,12 +49,12 @@ class HandleInertiaRequests extends Middleware
         ];
     }
 
-    /** @return array{treasurer: bool, administrator: bool} */
+    /** @return array{treasurer: bool, administrator: bool, auditor: bool} */
     private function fundRoles(Request $request): array
     {
         $user = $request->user();
         if ($user === null) {
-            return ['treasurer' => false, 'administrator' => false];
+            return ['treasurer' => false, 'administrator' => false, 'auditor' => false];
         }
 
         $fund = FundSetting::query()->find(1);
@@ -62,6 +62,7 @@ class HandleInertiaRequests extends Middleware
         return [
             'treasurer' => $fund?->isTreasurer($user) ?? false,
             'administrator' => $fund?->isAdministrator($user) ?? false,
+            'auditor' => $fund?->isAuditor($user) ?? false,
         ];
     }
 }

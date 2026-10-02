@@ -62,21 +62,23 @@ class TreasuryContributions
             ->selectRaw('CASE WHEN users.created_at < ? THEN ? ELSE 0 END as expected_cents', [$cutoff, $period->amount_cents])
             ->selectRaw('CASE WHEN users.created_at >= ? THEN ? WHEN COALESCE(payments.approved_cents, 0) >= ? THEN ? WHEN payments.pending_id IS NOT NULL THEN ? ELSE ? END as status', [$cutoff, 'not_applicable', $period->amount_cents, 'paid', 'pending', 'unpaid']);
 
-        return DB::query()->fromSub($participants, 'participants')
+        /** @var \Illuminate\Pagination\LengthAwarePaginator<int, object{id: int|string, name: string, email: string, approved_id: int|string|null, pending_id: int|string|null, approved_cents: int|string, expected_cents: int|string, status: string}> $unmappedParticipants */
+        $unmappedParticipants = DB::query()->fromSub($participants, 'participants')
             ->when($status !== '', fn ($query) => $query->where('status', $status))
-            ->orderBy('name')->orderBy('id')->paginate(15)->withQueryString()
-            ->through(function (object $person): array {
-                $expected = (int) $person->expected_cents;
-                $approved = (int) $person->approved_cents;
-                $transactionId = $person->pending_id ?? $person->approved_id;
+            ->orderBy('name')->orderBy('id')->paginate(15)->withQueryString();
 
-                return [
-                    'id' => (int) $person->id, 'name' => $person->name, 'email' => $person->email,
-                    'expected_cents' => $expected, 'approved_cents' => $approved,
-                    'pending_cents' => max(0, $expected - $approved), 'status' => $person->status,
-                    'transaction_id' => $transactionId === null ? null : (int) $transactionId,
-                ];
-            });
+        return $unmappedParticipants->through(function (object $person): array {
+            $expected = (int) $person->expected_cents;
+            $approved = (int) $person->approved_cents;
+            $transactionId = $person->pending_id ?? $person->approved_id;
+
+            return [
+                'id' => (int) $person->id, 'name' => $person->name, 'email' => $person->email,
+                'expected_cents' => $expected, 'approved_cents' => $approved,
+                'pending_cents' => max(0, $expected - $approved), 'status' => $person->status,
+                'transaction_id' => $transactionId === null ? null : (int) $transactionId,
+            ];
+        });
     }
 
     private function registrationCutoff(ContributionPeriod $period): CarbonImmutable

@@ -188,8 +188,10 @@ class FundTransactionController extends Controller
 
     public function evidence(Request $request, Evidence $evidence): BinaryFileResponse
     {
-        abort_unless($evidence->user_id === $request->user()->id || FundSetting::current()->isTreasurer($request->user()), 403);
+        $fund = FundSetting::current();
+        abort_unless($evidence->user_id === $request->user()->id || $fund->isTreasurer($request->user()) || $fund->isAuditor($request->user()), 403);
         abort_unless(FundTransaction::query()->where('evidence_id', $evidence->id)->exists() || Loan::query()->where('evidence_id', $evidence->id)->exists(), 404);
+        abort_unless(Storage::disk('fund')->exists($evidence->path), 404, 'El archivo del comprobante no está disponible.');
 
         return response()->download(Storage::disk('fund')->path($evidence->path), $evidence->original_name, ['Content-Type' => $evidence->mime]);
     }
