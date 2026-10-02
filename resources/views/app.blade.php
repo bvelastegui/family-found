@@ -35,6 +35,19 @@
         <link rel="apple-touch-icon" href="/apple-touch-icon.png">
         <link rel="manifest" href="/manifest.webmanifest">
         <meta name="theme-color" content="#1e293b">
+        <meta name="description" content="Aportes y tesorería del Fondo Familiar">
+        <meta property="og:type" content="website">
+        <meta property="og:title" content="Fondo Familiar">
+        <meta property="og:description" content="Aportes y tesorería del Fondo Familiar">
+        <meta property="og:image" content="{{ url('/pwa-512.png') }}">
+        <meta property="og:image:type" content="image/png">
+        <meta property="og:image:width" content="512">
+        <meta property="og:image:height" content="512">
+        <meta property="og:image:alt" content="Icono de Fondo Familiar sobre fondo azul oscuro">
+        <meta name="twitter:card" content="summary_large_image">
+        <meta name="twitter:title" content="Fondo Familiar">
+        <meta name="twitter:description" content="Aportes y tesorería del Fondo Familiar">
+        <meta name="twitter:image" content="{{ url('/pwa-512.png') }}">
 
         @fonts
 
