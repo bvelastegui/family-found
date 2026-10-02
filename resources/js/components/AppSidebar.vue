@@ -12,7 +12,7 @@ import {
   Galaxy,
   ShieldCheck,
 } from '@lucide/vue';
-import { computed } from 'vue';
+import { computed, watch } from 'vue';
 import NavMain from '@/components/NavMain.vue';
 import NavUser from '@/components/NavUser.vue';
 import {
@@ -24,6 +24,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from '@/components/ui/sidebar';
+import { useSidebar } from '@/components/ui/sidebar/utils';
 import { dashboard } from '@/routes';
 import { index as contributionsIndex } from '@/routes/fund/contributions';
 import { index as transactionsIndex } from '@/routes/fund/transactions';
@@ -41,6 +42,7 @@ import {
 import type { NavItem } from '@/types';
 
 const page = usePage();
+const { isMobile, setOpenMobile } = useSidebar();
 const roles = computed(
   () =>
     page.props.fundRoles as
@@ -136,6 +138,15 @@ const auditNavItems = computed<NavItem[]>(() => {
     },
   ];
 });
+
+watch(
+  () => page.url,
+  () => {
+    if (isMobile.value) {
+      setOpenMobile(false);
+    }
+  },
+);
 </script>
 
 <template>
