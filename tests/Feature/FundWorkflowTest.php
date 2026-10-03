@@ -87,6 +87,36 @@ test('HTTP registration requires an exact allocation and keeps the bank receipt 
     $this->assertDatabaseCount('fund_transactions', 1);
 });
 
+test('sharing an evidence file redirects to the transaction form and exposes the file once', function () {
+    [$treasurer, $member] = prepareFund();
+    $file = UploadedFile::fake()->create('transferencia.pdf', 1, 'application/pdf');
+
+    $this->actingAs($member)->post(route('fund.transactions.share'), ['evidence' => $file])
+        ->assertRedirect(route('fund.transactions.create'));
+
+    $this->actingAs($member)->get(route('fund.transactions.create'))
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('fund/TransactionForm')
+            ->where('sharedEvidence.name', 'transferencia.pdf')
+            ->where('sharedEvidence.mime', 'application/pdf')
+            ->has('sharedEvidence.contents'));
+
+    $this->actingAs($member)->get(route('fund.transactions.create'))
+        ->assertInertia(fn (Assert $page) => $page->component('fund/TransactionForm')->where('sharedEvidence', null));
+});
+
+test('sharing rejects unsupported and oversized evidence files', function () {
+    [$treasurer, $member] = prepareFund();
+
+    $this->actingAs($member)->post(route('fund.transactions.share'), [
+        'evidence' => UploadedFile::fake()->create('script.txt', 1, 'text/plain'),
+    ])->assertSessionHasErrors('evidence');
+
+    $this->actingAs($member)->post(route('fund.transactions.share'), [
+        'evidence' => UploadedFile::fake()->create('large.pdf', 10241, 'application/pdf'),
+    ])->assertSessionHasErrors('evidence');
+});
+
 test('correction replaces a posted contribution atomically and preserves the old journal', function () {
     Storage::fake('fund');
     [$treasurer, $member, $bankId] = prepareFund();

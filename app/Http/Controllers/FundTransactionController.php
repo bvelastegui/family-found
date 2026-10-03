@@ -21,7 +21,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Inertia\Response;
-use Symfony\Component\HttpFoundation\BinaryFileResponse;
+use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
 
 class FundTransactionController extends Controller
 {
@@ -106,7 +106,49 @@ class FundTransactionController extends Controller
             'periods' => $periods->map(fn ($period) => ['id' => $period->id, 'month' => $period->month->format('Y-m'), 'amount_cents' => $period->amount_cents, 'paid' => in_array($period->id, $paid, true)]),
             'loans' => $loans->map(fn (Loan $loan): array => ['id' => $loan->id, 'installments' => $loan->installments->map(fn (LoanInstallment $installment): array => ['id' => $installment->id, 'number' => $installment->number, 'amount_cents' => $installment->capital_cents + $installment->interest_cents, 'paid' => in_array($installment->id, $paidInstallments, true)])->all()])->all(),
             'hasPendingContribution' => FundTransaction::query()->where('pending_contributor_id', $user->id)->exists(),
+            'sharedEvidence' => $this->pullSharedEvidence($request),
         ]);
+    }
+
+    /**
+     * @return array{name: string, mime: string, contents: string}|null
+     */
+    private function pullSharedEvidence(Request $request): ?array
+    {
+        $sharedEvidence = $request->session()->pull('shared_transaction_evidence');
+
+        return is_array($sharedEvidence)
+            && is_string($sharedEvidence['name'] ?? null)
+            && is_string($sharedEvidence['mime'] ?? null)
+            && is_string($sharedEvidence['contents'] ?? null)
+            ? $sharedEvidence
+            : null;
+    }
+
+    public function share(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'evidence' => ['required', 'file', 'mimes:jpg,jpeg,png,pdf', 'max:10240'],
+        ], [
+            'evidence.required' => 'Comparte una imagen JPG, PNG o un archivo PDF.',
+            'evidence.mimes' => 'El comprobante debe ser una imagen JPG, PNG o un archivo PDF.',
+            'evidence.max' => 'El comprobante debe pesar como máximo 10 MB.',
+        ]);
+
+        $file = $validated['evidence'];
+        $contentType = $file->getMimeType();
+        abort_unless(in_array($contentType, ['image/jpeg', 'image/png', 'application/pdf'], true), 422);
+
+        $contents = file_get_contents($file->getRealPath());
+        abort_unless($contents !== false, 422, 'No se pudo leer el archivo compartido.');
+
+        $request->session()->put('shared_transaction_evidence', [
+            'contents' => base64_encode($contents),
+            'mime' => $contentType,
+            'name' => $file->getClientOriginalName(),
+        ]);
+
+        return to_route('fund.transactions.create');
     }
 
     public function store(FundTransactionRequest $request, FundTransactions $transactions): RedirectResponse
@@ -133,7 +175,9 @@ class FundTransactionController extends Controller
 
         $treasurer = FundSetting::current()->isTreasurer($request->user());
 
-        return Inertia::render('fund/Transaction', ['transaction' => $transaction, 'allocations' => $allocations, 'events' => $events, 'isTreasurer' => $treasurer, 'returnTo' => $this->returnTo($request), 'banks' => $treasurer ? Bank::query()->where('active', true)->orderBy('name')->get(['id', 'name']) : []]);
+        $evidence = DB::table('evidences')->where('id', $transaction->evidence_id)->first(['id', 'mime', 'original_name']);
+
+        return Inertia::render('fund/Transaction', ['transaction' => $transaction, 'evidence' => $evidence, 'allocations' => $allocations, 'events' => $events, 'isTreasurer' => $treasurer, 'returnTo' => $this->returnTo($request), 'banks' => $treasurer ? Bank::query()->where('active', true)->orderBy('name')->get(['id', 'name']) : []]);
     }
 
     public function edit(Request $request, FundTransaction $transaction, FundContributions $contributions): Response
@@ -186,7 +230,7 @@ class FundTransactionController extends Controller
         return to_route('fund.transactions.show', $id);
     }
 
-    public function evidence(Request $request, Evidence $evidence): BinaryFileResponse
+    public function evidence(Request $request, Evidence $evidence): SymfonyResponse
     {
         $fund = FundSetting::current();
         abort_unless($evidence->user_id === $request->user()->id || $fund->isTreasurer($request->user()) || $fund->isAuditor($request->user()), 403);
@@ -194,6 +238,21 @@ class FundTransactionController extends Controller
         abort_unless(Storage::disk('fund')->exists($evidence->path), 404, 'El archivo del comprobante no está disponible.');
 
         return response()->download(Storage::disk('fund')->path($evidence->path), $evidence->original_name, ['Content-Type' => $evidence->mime]);
+    }
+
+    public function previewEvidence(Request $request, Evidence $evidence): SymfonyResponse
+    {
+        $fund = FundSetting::current();
+        abort_unless($evidence->user_id === $request->user()->id || $fund->isTreasurer($request->user()) || $fund->isAuditor($request->user()), 403);
+        abort_unless(FundTransaction::query()->where('evidence_id', $evidence->id)->exists() || Loan::query()->where('evidence_id', $evidence->id)->exists(), 404);
+        abort_unless(in_array($evidence->mime, ['image/jpeg', 'image/png', 'application/pdf'], true), 415);
+        abort_unless(Storage::disk('fund')->exists($evidence->path), 404, 'El archivo del comprobante no está disponible.');
+
+        return response()->file(Storage::disk('fund')->path($evidence->path), [
+            'Content-Type' => $evidence->mime,
+            'Content-Disposition' => 'inline; filename="'.addcslashes($evidence->original_name, '"\\').'"',
+            'X-Content-Type-Options' => 'nosniff',
+        ]);
     }
 
     private function returnTo(Request $request): ?string

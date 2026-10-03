@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import { Head, Link, useForm, setLayoutProps } from '@inertiajs/vue3';
+import { ArrowLeft, Check, Download, X } from '@lucide/vue';
+import { useSidebar } from '@/components/ui/sidebar/utils';
 import { dashboard } from '@/routes';
 import {
   index as transactionsIndex,
@@ -8,17 +10,21 @@ import {
   reject,
   edit,
 } from '@/routes/fund/transactions';
-import { show as evidenceShow } from '@/routes/fund/evidences';
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
+  show as evidenceShow,
+  preview as evidencePreview,
+} from '@/routes/fund/evidences';
 import { Button } from '@/components/ui/button';
 import AutoResizeTextarea from '@/components/AutoResizeTextarea.vue';
 import { Label } from '@/components/ui/label';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import FundStatus from '@/components/FundStatus.vue';
 import {
   fundDate,
@@ -58,8 +64,14 @@ type Event = {
   actor_name: string;
   data: string | { reason?: string };
 };
+type Evidence = {
+  id: number;
+  mime: string;
+  original_name: string;
+};
 const props = defineProps<{
   transaction: Transaction;
+  evidence: Evidence;
   allocations: Allocation[];
   events: Event[];
   isTreasurer: boolean;
@@ -81,6 +93,13 @@ setLayoutProps({
 const approval = useForm({ idempotency_key: operationKey() });
 const rejection = useForm({ idempotency_key: operationKey(), reason: '' });
 const showingRejection = ref(false);
+const { setOpenMobile } = useSidebar();
+const isPreviewable = computed(() =>
+  ['application/pdf', 'image/jpeg', 'image/png'].includes(props.evidence.mime),
+);
+const evidencePreviewUrl = computed(
+  () => evidencePreview(props.evidence.id).url,
+);
 const approvalEvent = computed(() =>
   props.events.find((event) => event.event === 'transaction.approved'),
 );
@@ -123,72 +142,150 @@ function reason(event: Event): string | null {
 </script>
 
 <template>
-  <main class="mx-auto flex w-full max-w-4xl flex-col gap-6 p-4 md:p-8">
+  <main class="mx-auto flex w-full max-w-4xl flex-col gap-4 p-3 pb-24 sm:gap-6 sm:p-4 sm:pb-8 md:p-8">
     <Head :title="`Transferencia #${transaction.id}`" />
-    <header class="flex flex-wrap items-center justify-between gap-3">
-      <div>
-        <p class="text-sm text-muted-foreground">Historial de transferencias</p>
-        <h1 class="text-3xl font-semibold tracking-tight">
+    <p class="sr-only" aria-live="polite">
+      {{ isTreasurer && transaction.status === 'pending' ? 'Acciones disponibles: volver, aprobar o rechazar.' : `Estado: ${transaction.status}` }}
+    </p>
+    <header class="sticky top-0 z-20 -mx-3 flex items-center gap-1 border-b bg-background/95 px-2 py-2 backdrop-blur sm:static sm:mx-0 sm:gap-2 sm:border-0 sm:bg-transparent sm:p-0 sm:backdrop-blur-none">
+      <Link
+        :href="returnTo ?? transactionsIndex().url"
+        aria-label="Volver"
+        class="inline-flex size-10 shrink-0 items-center justify-center rounded-md hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring sm:size-11"
+        @click="setOpenMobile(false)"
+      >
+        <ArrowLeft class="size-5" />
+      </Link>
+      <div class="min-w-0 flex-1">
+        <h1 class="truncate text-base font-semibold sm:text-2xl">
           Comprobante #{{ transaction.id }}
         </h1>
-        <p class="mt-1 text-muted-foreground">
-          Transferencia del
-          {{ fundDate(transaction.transaction_date) }}
-        </p>
-        <p class="mt-1 text-sm text-muted-foreground">
-          Registrada en el sistema el
-          {{ fundDateTime(transaction.created_at) }}
-        </p>
-        <p
-          v-if="approvalEvent"
-          class="mt-2 text-sm font-medium"
-        >
-          Autorizada por {{ approvalEvent.actor_name }} el
-          {{ fundDateTime(approvalEvent.created_at) }}
+        <p class="truncate text-xs text-muted-foreground sm:text-sm">
+          {{ fundDate(transaction.transaction_date) }} · {{ usd(transaction.amount_cents) }}
         </p>
       </div>
       <FundStatus :status="transaction.status" />
+      <div
+        v-if="isTreasurer && transaction.status === 'pending'"
+        class="hidden items-center gap-2 sm:flex"
+      >
+        <form
+          class="shrink-0"
+          @submit.prevent="approval.post(approve(transaction.id, { query: returnQuery }).url)"
+        >
+          <Button
+            type="submit"
+            size="icon"
+            class="size-10 sm:size-11"
+            aria-label="Aprobar y contabilizar"
+            title="Aprobar y contabilizar"
+            :disabled="approval.processing || rejection.processing"
+          >
+            <Check class="size-5" />
+          </Button>
+        </form>
+        <Button
+          v-if="!showingRejection"
+          type="button"
+          variant="destructive"
+          size="icon"
+          class="size-10 shrink-0 sm:size-11"
+          aria-label="Rechazar comprobante"
+          title="Rechazar comprobante"
+          :disabled="approval.processing"
+          @click="showingRejection = true"
+        >
+          <X class="size-5" />
+        </Button>
+      </div>
     </header>
-    <Card
-      ><CardHeader
-        ><CardTitle>Información bancaria</CardTitle
-        ><CardDescription
-          >Este registro se contabiliza únicamente si el tesorero lo
-          aprueba.</CardDescription
-        ></CardHeader
-      ><CardContent class="grid gap-4 text-sm sm:grid-cols-2"
-        ><div>
-          <p class="text-muted-foreground">Banco de origen</p>
-          <p class="font-medium">{{ transaction.bank_name }}</p>
+    <p
+      v-if="approval.hasErrors"
+      role="alert"
+      class="rounded-md border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive"
+    >
+      La aprobación no se completó. Comprueba que las asignaciones sigan siendo válidas.
+    </p>
+    <p class="hidden text-sm text-muted-foreground sm:block">
+      Transferencia del {{ fundDate(transaction.transaction_date) }} · Registrada en el sistema el
+      {{ fundDateTime(transaction.created_at) }}
+      <span v-if="approvalEvent" class="font-medium text-foreground">
+        · Autorizada por {{ approvalEvent.actor_name }} el {{ fundDateTime(approvalEvent.created_at) }}
+      </span>
+    </p>
+    <section aria-labelledby="evidence-title" class="space-y-2">
+      <header class="flex items-baseline justify-between gap-2">
+        <h2 id="evidence-title" class="text-base font-semibold">Comprobante</h2>
+        <p class="truncate text-xs text-muted-foreground">{{ evidence.original_name }}</p>
+      </header>
+      <p class="text-sm text-muted-foreground">
+        Comprueba que el valor indicado en la evidencia coincida con la transferencia registrada:
+        <strong class="whitespace-nowrap text-foreground">{{ usd(transaction.amount_cents) }}</strong>.
+      </p>
+        <div
+          v-if="isPreviewable"
+          class="overflow-auto rounded-md border bg-muted/30"
+        >
+          <img
+            v-if="evidence.mime.startsWith('image/')"
+            :src="evidencePreviewUrl"
+            :alt="`Vista previa del comprobante ${evidence.original_name}`"
+            class="mx-auto block h-auto max-h-[78vh] w-auto max-w-full object-contain"
+            loading="eager"
+            fetchpriority="high"
+          />
+          <iframe
+            v-else
+            :src="evidencePreviewUrl"
+            :title="`Vista previa del comprobante ${evidence.original_name}`"
+            class="h-[78vh] min-h-[32rem] w-full"
+          />
         </div>
-        <div>
+        <p v-else class="rounded-md border px-3 py-2 text-sm text-muted-foreground">
+          Este tipo de archivo no admite vista previa.
+        </p>
+        <div class="flex flex-wrap gap-2">
+          <Button variant="outline" size="sm" as-child>
+            <a :href="evidenceShow(transaction.evidence_id).url">
+              <Download class="size-4" />
+              Descargar comprobante
+            </a>
+          </Button>
+        </div>
+    </section>
+    <section class="space-y-2 border-t pt-3">
+      <div>
+        <h2 class="text-base font-semibold">Información bancaria</h2>
+        <p class="text-xs text-muted-foreground">Solo se contabiliza al aprobar la transferencia.</p>
+      </div>
+      <div class="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
+        <div class="min-w-0">
+          <p class="text-muted-foreground">Banco de origen</p>
+          <p class="truncate font-medium">{{ transaction.bank_name }}</p>
+        </div>
+        <div class="min-w-0">
           <p class="text-muted-foreground">Número de comprobante</p>
-          <p class="font-medium">{{ transaction.reference }}</p>
+          <p class="truncate font-medium">{{ transaction.reference }}</p>
         </div>
         <div>
           <p class="text-muted-foreground">Monto transferido</p>
-          <p class="text-xl font-semibold">
+          <p class="font-semibold">
             {{ usd(transaction.amount_cents) }}
           </p>
         </div>
         <div>
-          <p class="text-muted-foreground">Evidencia</p>
-          <a
-            :href="evidenceShow(transaction.evidence_id).url"
-            class="font-medium underline underline-offset-4"
-            >Descargar comprobante</a
-          >
-        </div></CardContent
-      ></Card
-    >
-    <Card
-      ><CardHeader><CardTitle>Asignación del pago</CardTitle></CardHeader
-      ><CardContent
-        ><ul class="divide-y">
+          <p class="text-muted-foreground">Fecha del movimiento</p>
+          <p class="font-medium">{{ fundDate(transaction.transaction_date) }}</p>
+        </div>
+      </div>
+    </section>
+    <section class="space-y-2 border-t pt-3">
+      <h2 class="text-base font-semibold">Asignación del pago</h2>
+      <ul class="divide-y">
           <li
             v-for="allocation in allocations"
             :key="allocation.id"
-            class="flex flex-wrap justify-between gap-2 py-3"
+            class="flex flex-wrap justify-between gap-2 py-2"
           >
             <div>
               <p class="font-medium">
@@ -208,59 +305,27 @@ function reason(event: Event): string | null {
             </div>
             <strong>{{ usd(allocation.amount_cents) }}</strong>
           </li>
-        </ul></CardContent
-      ></Card
-    >
-    <Card v-if="isTreasurer && transaction.status === 'pending'">
-      <CardHeader>
-        <CardTitle>Decidir sobre este comprobante</CardTitle>
-        <CardDescription>
-          Comprueba el monto, la asignación y la evidencia antes de decidir.
-          Aprobar no requiere completar ningún campo.
-        </CardDescription>
-      </CardHeader>
-      <CardContent class="flex flex-col items-start gap-4">
+      </ul>
+    </section>
+    <Dialog v-model:open="showingRejection">
+      <DialogContent class="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Rechazar comprobante</DialogTitle>
+          <DialogDescription>
+            Indica el motivo del rechazo. No se registrará ningún movimiento en el fondo.
+          </DialogDescription>
+        </DialogHeader>
         <form
-          @submit.prevent="
-            approval.post(approve(transaction.id, { query: returnQuery }).url)
-          "
-        >
-          <Button :disabled="approval.processing || rejection.processing">
-            Aprobar y contabilizar
-          </Button>
-          <p
-            v-if="approval.hasErrors"
-            role="alert"
-            class="mt-2 text-sm text-destructive"
-          >
-            La aprobación no se completó. Comprueba que las asignaciones sigan
-            siendo válidas.
-          </p>
-        </form>
-        <Button
-          v-if="!showingRejection"
-          type="button"
-          variant="outline"
-          :disabled="approval.processing"
-          @click="showingRejection = true"
-        >
-          Necesito rechazarlo
-        </Button>
-        <form
-          v-if="showingRejection"
           id="rejection-form"
-          class="flex w-full flex-col items-start gap-3 rounded-lg border p-4"
+          class="flex w-full flex-col gap-4"
           @submit.prevent="
-            rejection.post(reject(transaction.id, { query: returnQuery }).url)
+            rejection.post(reject(transaction.id, { query: returnQuery }).url, {
+              onSuccess: () => {
+                showingRejection = false;
+              },
+            })
           "
         >
-          <div>
-            <p class="font-medium">Rechazar comprobante</p>
-            <p class="text-sm text-muted-foreground">
-              Solo para rechazar debes explicar el motivo. No se registrará
-              ningún movimiento en el fondo.
-            </p>
-          </div>
           <div class="flex w-full flex-col gap-2">
             <Label for="rejection-reason"
               >Motivo del rechazo (obligatorio)</Label
@@ -284,7 +349,7 @@ function reason(event: Event): string | null {
               {{ rejection.errors.reason }}
             </p>
           </div>
-          <div class="flex flex-wrap gap-2">
+          <DialogFooter class="flex-col-reverse gap-2 sm:flex-row">
             <Button
               type="submit"
               variant="destructive"
@@ -303,39 +368,41 @@ function reason(event: Event): string | null {
             >
               Cancelar
             </Button>
-          </div>
+          </DialogFooter>
         </form>
-      </CardContent>
-    </Card>
-    <Card
+      </DialogContent>
+    </Dialog>
+    <section
       v-if="
         isTreasurer &&
         transaction.status === 'approved' &&
         !transaction.superseded_by_id
       "
-      ><CardHeader
-        ><CardTitle>¿Necesitas corregir el registro?</CardTitle
-        ><CardDescription
-          >La corrección conserva el comprobante original y contabiliza la
-          reversión y el reemplazo juntos.</CardDescription
-        ></CardHeader
-      ><CardContent
-        ><Button
+      class="space-y-2 border-t py-3"
+      >
+      <div>
+        <h2 class="font-semibold">¿Necesitas corregir el registro?</h2>
+        <p class="text-xs text-muted-foreground">
+          La corrección conserva el comprobante original y contabiliza la reversión y el reemplazo juntos.
+        </p>
+      </div>
+      <div>
+        <Button
           variant="outline"
           as-child
-          ><Link :href="edit(transaction.id)">Preparar corrección</Link></Button
-        ></CardContent
-      ></Card
-    >
-    <Card
-      ><CardHeader
-        ><CardTitle>Historial de decisiones</CardTitle
-        ><CardDescription
-          >Quién intervino y qué sucedió con este comprobante. Horarios de
-          Ecuador.</CardDescription
-        ></CardHeader
-      ><CardContent
-        ><ol
+        >
+          <Link :href="edit(transaction.id)">Preparar corrección</Link>
+        </Button>
+      </div>
+    </section>
+    <section class="space-y-2 border-t pt-3">
+      <div>
+        <h2 class="text-base font-semibold">Historial de decisiones</h2>
+        <p class="text-xs text-muted-foreground">
+          Quién intervino y qué sucedió con este comprobante. Horarios de Ecuador.
+        </p>
+      </div>
+      <ol
           v-if="events.length"
           class="text-sm"
           aria-label="Decisiones sobre la transferencia"
@@ -369,18 +436,42 @@ function reason(event: Event): string | null {
               Motivo: {{ reason(event) }}
             </p>
           </li>
-        </ol>
+      </ol>
         <p
           v-else
           class="text-muted-foreground"
         >
           Todavía no hay decisiones registradas.
-        </p></CardContent
-      ></Card
-    ><Link
+        </p>
+    </section>
+    <Link
       :href="returnTo ?? transactionsIndex().url"
-      class="text-sm underline underline-offset-4"
+      class="hidden text-sm underline underline-offset-4 sm:inline"
       >{{ returnTo ? 'Volver al listado' : 'Volver a mis transacciones' }}</Link
     >
+    <div
+      v-if="isTreasurer && transaction.status === 'pending'"
+      class="fixed inset-x-0 bottom-0 z-30 flex gap-3 border-t bg-background/95 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur sm:hidden"
+    >
+      <Button
+        class="h-12 flex-1"
+        :disabled="approval.processing || rejection.processing"
+        @click="
+          approval.post(approve(transaction.id, { query: returnQuery }).url)
+        "
+      >
+        <Check class="size-4" />
+        Aprobar
+      </Button>
+      <Button
+        class="h-12 flex-1"
+        variant="destructive"
+        :disabled="approval.processing"
+        @click="showingRejection = true"
+      >
+        <X class="size-4" />
+        Rechazar
+      </Button>
+    </div>
   </main>
 </template>

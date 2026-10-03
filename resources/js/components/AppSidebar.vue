@@ -11,8 +11,9 @@ import {
   Wallet,
   Galaxy,
   ShieldCheck,
+  Ellipsis,
 } from '@lucide/vue';
-import { computed, watch } from 'vue';
+import { computed, ref, watch } from 'vue';
 import NavMain from '@/components/NavMain.vue';
 import NavUser from '@/components/NavUser.vue';
 import {
@@ -26,6 +27,7 @@ import {
 } from '@/components/ui/sidebar';
 import { useSidebar } from '@/components/ui/sidebar/utils';
 import { dashboard } from '@/routes';
+import { edit as profileEdit } from '@/routes/profile';
 import { index as contributionsIndex } from '@/routes/fund/contributions';
 import { index as transactionsIndex } from '@/routes/fund/transactions';
 import { index as loansIndex } from '@/routes/fund/loans';
@@ -40,9 +42,11 @@ import {
   controls as auditControls,
 } from '@/routes/fund/audit';
 import type { NavItem } from '@/types';
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 
 const page = usePage();
 const { isMobile, setOpenMobile } = useSidebar();
+const isMoreMenuOpen = ref(false);
 const roles = computed(
   () =>
     page.props.fundRoles as
@@ -138,6 +142,40 @@ const auditNavItems = computed<NavItem[]>(() => {
     },
   ];
 });
+const moreNavItems = computed<NavItem[]>(() => [
+  {
+    title: 'Perfil y configuración',
+    href: profileEdit(),
+    icon: Settings2,
+    isActive: page.url.split('?')[0].startsWith('/settings'),
+  },
+  ...(roles.value?.treasurer ? treasuryNavItems.value : []),
+  ...(roles.value?.auditor ? auditNavItems.value : []),
+]);
+const mobileNavItems = computed<NavItem[]>(() => {
+  const url = page.url.split('?')[0];
+
+  return [
+    {
+      title: 'Inicio',
+      href: dashboard(),
+      icon: LayoutDashboard,
+      isActive: url === dashboard().url,
+    },
+    {
+      title: 'Mis aportes',
+      href: contributionsIndex(),
+      icon: CalendarDays,
+      isActive: url.startsWith(contributionsIndex().url),
+    },
+    {
+      title: 'Mis transacciones',
+      href: transactionsIndex(),
+      icon: ReceiptText,
+      isActive: url.startsWith(transactionsIndex().url),
+    },
+  ];
+});
 
 watch(
   () => page.url,
@@ -191,5 +229,54 @@ watch(
       <NavUser />
     </SidebarFooter>
   </Sidebar>
+  <nav
+    class="fixed inset-x-0 bottom-0 z-40 grid grid-cols-4 border-t bg-background/95 pb-[env(safe-area-inset-bottom)] shadow-[0_-4px_16px_-12px_rgba(0,0,0,0.3)] backdrop-blur md:hidden"
+    aria-label="Navegación principal"
+  >
+    <Link
+      v-for="item in mobileNavItems"
+      :key="item.title"
+      :href="item.href"
+      class="flex min-h-16 flex-col items-center justify-center gap-1 px-1 text-[11px] text-muted-foreground transition-colors"
+      :class="item.isActive ? 'font-semibold text-primary' : ''"
+      :aria-current="item.isActive ? 'page' : undefined"
+      @click="setOpenMobile(false)"
+    >
+      <component :is="item.icon" class="size-5" />
+      <span>{{ item.title === 'Mis aportes' ? 'Aportes' : item.title === 'Mis transacciones' ? 'Transacciones' : item.title }}</span>
+    </Link>
+    <button
+      type="button"
+      class="flex min-h-16 flex-col items-center justify-center gap-1 px-1 text-[11px] text-muted-foreground"
+      :aria-expanded="isMoreMenuOpen"
+      aria-haspopup="dialog"
+      @click="isMoreMenuOpen = true"
+    >
+      <Ellipsis class="size-5" />
+      <span>Más</span>
+    </button>
+  </nav>
+  <Sheet v-model:open="isMoreMenuOpen">
+    <SheetContent side="bottom" class="max-h-[80vh] rounded-t-2xl px-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
+      <SheetHeader class="px-0 text-left">
+        <SheetTitle>Más opciones</SheetTitle>
+        <SheetDescription>Tu cuenta y opciones disponibles del fondo</SheetDescription>
+      </SheetHeader>
+      <div class="mt-3 grid gap-1 overflow-y-auto">
+        <Link
+          v-for="item in moreNavItems"
+          :key="item.title"
+          :href="item.href"
+          class="flex min-h-12 items-center gap-3 rounded-md px-3 text-sm hover:bg-accent"
+          :class="item.isActive ? 'bg-accent font-medium text-accent-foreground' : ''"
+          :aria-current="item.isActive ? 'page' : undefined"
+          @click="isMoreMenuOpen = false"
+        >
+          <component :is="item.icon" class="size-5" />
+          <span>{{ item.title }}</span>
+        </Link>
+      </div>
+    </SheetContent>
+  </Sheet>
   <slot />
 </template>

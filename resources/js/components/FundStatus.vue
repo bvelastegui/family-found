@@ -19,7 +19,7 @@ const icon = computed(() =>
 const label = computed(
   () =>
     ({
-      pending: 'En revisión',
+      pending: 'Pendiente',
       approved: 'Aprobada',
       rejected: 'Rechazada',
       paid: 'Pagado',

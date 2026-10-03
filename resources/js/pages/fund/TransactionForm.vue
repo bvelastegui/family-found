@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, nextTick, onUnmounted, ref, watch } from 'vue';
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
 import { Head, Link, useForm } from '@inertiajs/vue3';
 import { ArrowLeft, ArrowRight, Check, FileText, Upload, X } from '@lucide/vue';
 import { dashboard } from '@/routes';
@@ -28,6 +28,7 @@ const props = defineProps<{
   periods: Period[];
   loans: { id: number; installments: Installment[] }[];
   hasPendingContribution: boolean;
+  sharedEvidence?: { name: string; mime: string; contents: string } | null;
 }>();
 defineOptions({
   layout: {
@@ -42,6 +43,7 @@ const step = ref(1);
 const evidence = ref<File | null>(null);
 const receiptInput = ref<HTMLInputElement | null>(null);
 const preview = ref<string | null>(null);
+const sharedEvidenceApplied = ref(false);
 const stepHeading = ref<HTMLElement | null>(null);
 const steps = [
   {
@@ -133,6 +135,29 @@ watch(evidence, (file) => {
   preview.value = file?.type.startsWith('image/')
     ? URL.createObjectURL(file)
     : null;
+});
+onMounted(async () => {
+  if (!props.sharedEvidence || sharedEvidenceApplied.value) return;
+
+  try {
+    const contents = props.sharedEvidence.contents;
+    const binary = atob(contents);
+    const bytes = Uint8Array.from(binary, (character) => character.charCodeAt(0));
+    const file = new File([bytes], props.sharedEvidence.name, {
+      type: props.sharedEvidence.mime,
+    });
+    const transfer = new DataTransfer();
+    transfer.items.add(file);
+    if (receiptInput.value) receiptInput.value.files = transfer.files;
+    chooseEvidence({ target: { files: transfer.files } } as unknown as Event);
+    sharedEvidenceApplied.value = true;
+    await goToStep(1);
+  } catch {
+    form.setError(
+      'evidence',
+      'No se pudo cargar el archivo compartido. Adjunta el comprobante nuevamente.',
+    );
+  }
 });
 onUnmounted(() => {
   if (preview.value) URL.revokeObjectURL(preview.value);
