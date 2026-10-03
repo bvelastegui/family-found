@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Head, Link } from '@inertiajs/vue3';
+import { Plus } from '@lucide/vue';
 import { dashboard } from '@/routes';
 import { index as loansIndex, show as showLoan } from '@/routes/fund/loans';
 import { create as createLoan } from '@/routes/fund/treasury/loans';
@@ -64,7 +65,39 @@ defineOptions({
           contables.
         </p>
       </div>
-      <div class="overflow-x-auto rounded-lg border">
+      <p
+        v-if="!reservedLoans.data.length"
+        class="text-sm text-muted-foreground md:hidden"
+      >
+        No hay reservas pendientes.
+      </p>
+      <ul
+        v-else
+        class="flex flex-col gap-3 md:hidden"
+      >
+        <li
+          v-for="loan in reservedLoans.data"
+          :key="loan.id"
+        >
+          <Link
+            :href="showLoan(loan.id)"
+            class="flex min-h-16 items-center justify-between gap-3 rounded-xl border p-3 hover:bg-muted/30 focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            <div class="min-w-0">
+              <p class="text-sm font-semibold break-words">
+                {{ loan.user.name }}
+              </p>
+              <p class="text-xs text-muted-foreground">
+                Reserva #{{ loan.id }}
+              </p>
+            </div>
+            <span class="shrink-0 text-sm font-semibold tabular-nums">{{
+              usd(loan.principal_cents)
+            }}</span>
+          </Link>
+        </li>
+      </ul>
+      <div class="hidden overflow-x-auto rounded-lg border md:block">
         <table class="w-full min-w-lg text-left text-sm">
           <caption class="sr-only">
             Préstamos reservados
@@ -161,109 +194,158 @@ defineOptions({
       </p>
       <div
         v-else
-        class="overflow-x-auto rounded-md border"
+        class="min-w-0"
       >
-        <table class="w-full min-w-[760px] text-left text-sm">
-          <caption class="sr-only">
-            Historial de préstamos y sus condiciones
-          </caption>
-          <thead class="bg-muted/70 text-muted-foreground">
-            <tr>
-              <th
-                scope="col"
-                class="px-4 py-3 font-medium"
-              >
-                Préstamo
-              </th>
-              <th
-                v-if="isTreasurer"
-                scope="col"
-                class="px-4 py-3 font-medium"
-              >
-                Prestatario
-              </th>
-              <th
-                scope="col"
-                class="px-4 py-3 text-right font-medium"
-              >
-                Principal
-              </th>
-              <th
-                scope="col"
-                class="px-4 py-3 text-right font-medium"
-              >
-                Pendiente
-              </th>
-              <th
-                scope="col"
-                class="px-4 py-3 text-right font-medium"
-              >
-                Tasa mensual
-              </th>
-              <th
-                scope="col"
-                class="px-4 py-3 text-right font-medium"
-              >
-                Plazo
-              </th>
-              <th
-                scope="col"
-                class="px-4 py-3 font-medium"
-              >
-                Estado
-              </th>
-              <th
-                scope="col"
-                class="px-4 py-3 text-right font-medium"
-              >
-                Detalle
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr
-              v-for="loan in loans.data"
-              :key="loan.id"
-              class="border-t transition-colors hover:bg-muted/30"
+        <ul class="flex flex-col gap-3 md:hidden">
+          <li
+            v-for="loan in loans.data"
+            :key="loan.id"
+          >
+            <Link
+              :href="showLoan(loan.id)"
+              class="flex flex-col gap-3 rounded-xl border p-3 hover:bg-muted/30 focus-visible:ring-2 focus-visible:ring-ring"
+              :aria-label="`Ver préstamo ${loan.id}`"
             >
-              <th
-                scope="row"
-                class="px-4 py-3 font-medium"
-              >
-                #{{ loan.id }}
-              </th>
-              <td
-                v-if="isTreasurer"
-                class="px-4 py-3"
-              >
-                {{ loan.user.name }}
-              </td>
-              <td class="px-4 py-3 text-right tabular-nums">
-                {{ usd(loan.principal_cents) }}
-              </td>
-              <td class="px-4 py-3 text-right font-medium tabular-nums">
-                {{ usd(loan.outstanding_cents) }}
-              </td>
-              <td class="px-4 py-3 text-right tabular-nums">
-                {{ loan.monthly_rate }} %
-              </td>
-              <td class="px-4 py-3 text-right tabular-nums">
-                {{ loan.term_months }} meses
-              </td>
-              <td class="px-4 py-3">
-                <FundStatus :status="loan.status" />
-              </td>
-              <td class="px-4 py-3 text-right">
-                <Link
-                  class="font-medium underline underline-offset-4 focus-visible:ring-2 focus-visible:ring-ring"
-                  :href="showLoan(loan.id)"
-                  :aria-label="`Ver préstamo ${loan.id}`"
-                  >Abrir</Link
+              <div class="flex items-start justify-between gap-3">
+                <div class="min-w-0">
+                  <p class="text-sm font-semibold">Préstamo #{{ loan.id }}</p>
+                  <p
+                    v-if="isTreasurer"
+                    class="text-xs break-words text-muted-foreground"
+                  >
+                    {{ loan.user.name }}
+                  </p>
+                </div>
+                <FundStatus
+                  :status="loan.status"
+                  subtle
+                />
+              </div>
+              <dl class="grid grid-cols-2 gap-3 text-xs">
+                <div>
+                  <dt class="text-muted-foreground">Monto del préstamo</dt>
+                  <dd class="mt-1 text-sm font-medium tabular-nums">
+                    {{ usd(loan.principal_cents) }}
+                  </dd>
+                </div>
+                <div>
+                  <dt class="text-muted-foreground">Saldo pendiente</dt>
+                  <dd
+                    class="mt-1 text-sm font-semibold text-primary tabular-nums"
+                  >
+                    {{ usd(loan.outstanding_cents) }}
+                  </dd>
+                </div>
+              </dl>
+              <p class="text-xs text-muted-foreground">
+                {{ loan.term_months }} meses · {{ loan.monthly_rate }} % mensual
+              </p>
+            </Link>
+          </li>
+        </ul>
+        <div class="hidden overflow-x-auto rounded-lg border md:block">
+          <table class="w-full min-w-[760px] text-left text-sm">
+            <caption class="sr-only">
+              Historial de préstamos y sus condiciones
+            </caption>
+            <thead class="bg-muted/70 text-muted-foreground">
+              <tr>
+                <th
+                  scope="col"
+                  class="px-4 py-3 font-medium"
                 >
-              </td>
-            </tr>
-          </tbody>
-        </table>
+                  Préstamo
+                </th>
+                <th
+                  v-if="isTreasurer"
+                  scope="col"
+                  class="px-4 py-3 font-medium"
+                >
+                  Prestatario
+                </th>
+                <th
+                  scope="col"
+                  class="px-4 py-3 text-right font-medium"
+                >
+                  Principal
+                </th>
+                <th
+                  scope="col"
+                  class="px-4 py-3 text-right font-medium"
+                >
+                  Pendiente
+                </th>
+                <th
+                  scope="col"
+                  class="px-4 py-3 text-right font-medium"
+                >
+                  Tasa mensual
+                </th>
+                <th
+                  scope="col"
+                  class="px-4 py-3 text-right font-medium"
+                >
+                  Plazo
+                </th>
+                <th
+                  scope="col"
+                  class="px-4 py-3 font-medium"
+                >
+                  Estado
+                </th>
+                <th
+                  scope="col"
+                  class="px-4 py-3 text-right font-medium"
+                >
+                  Detalle
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr
+                v-for="loan in loans.data"
+                :key="loan.id"
+                class="border-t transition-colors hover:bg-muted/30"
+              >
+                <th
+                  scope="row"
+                  class="px-4 py-3 font-medium"
+                >
+                  #{{ loan.id }}
+                </th>
+                <td
+                  v-if="isTreasurer"
+                  class="px-4 py-3"
+                >
+                  {{ loan.user.name }}
+                </td>
+                <td class="px-4 py-3 text-right tabular-nums">
+                  {{ usd(loan.principal_cents) }}
+                </td>
+                <td class="px-4 py-3 text-right font-medium tabular-nums">
+                  {{ usd(loan.outstanding_cents) }}
+                </td>
+                <td class="px-4 py-3 text-right tabular-nums">
+                  {{ loan.monthly_rate }} %
+                </td>
+                <td class="px-4 py-3 text-right tabular-nums">
+                  {{ loan.term_months }} meses
+                </td>
+                <td class="px-4 py-3">
+                  <FundStatus :status="loan.status" />
+                </td>
+                <td class="px-4 py-3 text-right">
+                  <Link
+                    class="font-medium underline underline-offset-4 focus-visible:ring-2 focus-visible:ring-ring"
+                    :href="showLoan(loan.id)"
+                    :aria-label="`Ver préstamo ${loan.id}`"
+                    >Abrir</Link
+                  >
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </div>
     </section>
     <FundPagination
@@ -271,5 +353,17 @@ defineOptions({
       :last-page="loans.last_page"
       label="Páginas de préstamos"
     />
+    <Button
+      v-if="isTreasurer"
+      class="fixed right-4 bottom-[calc(5rem+env(safe-area-inset-bottom))] z-30 size-14 rounded-full shadow-lg sm:hidden"
+      size="icon"
+      as-child
+    >
+      <Link
+        :href="createLoan()"
+        aria-label="Reservar nuevo préstamo"
+        ><Plus class="size-6"
+      /></Link>
+    </Button>
   </main>
 </template>
