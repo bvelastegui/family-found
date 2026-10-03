@@ -47,7 +47,7 @@ const user = computed(() => page.props.auth.user);
         <Label for="name">Nombre</Label>
         <Input
           id="name"
-          class="mt-1 block w-full"
+          class="mt-1 block h-12 w-full text-base!"
           name="name"
           :default-value="user.name"
           required
@@ -65,7 +65,7 @@ const user = computed(() => page.props.auth.user);
         <Input
           id="email"
           type="email"
-          class="mt-1 block w-full"
+          class="mt-1 block h-12 w-full text-base!"
           name="email"
           :default-value="user.email"
           required
@@ -80,6 +80,7 @@ const user = computed(() => page.props.auth.user);
 
       <div class="flex items-center gap-4">
         <Button
+          class="min-h-11 w-full sm:w-auto"
           :disabled="processing"
           data-test="update-profile-button"
           >Guardar</Button

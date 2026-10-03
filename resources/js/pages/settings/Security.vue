@@ -60,7 +60,7 @@ defineOptions({
         <PasswordInput
           id="current_password"
           name="current_password"
-          class="mt-1 block w-full"
+          class="mt-1 block h-12 w-full text-base!"
           autocomplete="current-password"
           placeholder="Contraseña actual"
         />
@@ -72,7 +72,7 @@ defineOptions({
         <PasswordInput
           id="password"
           name="password"
-          class="mt-1 block w-full"
+          class="mt-1 block h-12 w-full text-base!"
           autocomplete="new-password"
           placeholder="Nueva contraseña"
           :passwordrules="props.passwordRules"
@@ -85,7 +85,7 @@ defineOptions({
         <PasswordInput
           id="password_confirmation"
           name="password_confirmation"
-          class="mt-1 block w-full"
+          class="mt-1 block h-12 w-full text-base!"
           autocomplete="new-password"
           placeholder="Confirma tu contraseña"
           :passwordrules="props.passwordRules"
@@ -95,6 +95,7 @@ defineOptions({
 
       <div class="flex items-center gap-4">
         <Button
+          class="min-h-11 w-full sm:w-auto"
           :disabled="processing"
           data-test="update-password-button"
         >

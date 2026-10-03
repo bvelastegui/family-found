@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3';
-import Heading from '@/components/Heading.vue';
+import AppPageHeader from '@/components/AppPageHeader.vue';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { useCurrentUrl } from '@/composables/useCurrentUrl';
@@ -29,16 +29,13 @@ const { isCurrentOrParentUrl } = useCurrentUrl();
 </script>
 
 <template>
-  <div class="px-4 py-6">
-    <Heading
-      title="Configuración"
-      description="Administra tu perfil y las preferencias de tu cuenta"
-    />
+  <div class="mx-auto flex w-full max-w-5xl flex-col gap-6 p-4 md:p-8">
+    <AppPageHeader title="Configuración" />
 
     <div class="flex flex-col lg:flex-row lg:space-x-12">
       <aside class="w-full max-w-xl lg:w-48">
         <nav
-          class="flex flex-col space-y-1 space-x-0"
+          class="grid grid-cols-3 gap-1 rounded-xl bg-muted p-1 lg:flex lg:flex-col"
           aria-label="Configuración"
         >
           <Button
@@ -46,12 +43,21 @@ const { isCurrentOrParentUrl } = useCurrentUrl();
             :key="toUrl(item.href)"
             variant="ghost"
             :class="[
-              'w-full justify-start',
-              { 'bg-muted': isCurrentOrParentUrl(item.href) },
+              'min-h-11 w-full justify-center rounded-lg lg:justify-start',
+              {
+                'bg-background text-foreground shadow-sm': isCurrentOrParentUrl(
+                  item.href,
+                ),
+              },
             ]"
             as-child
           >
-            <Link :href="item.href">
+            <Link
+              :href="item.href"
+              :aria-current="
+                isCurrentOrParentUrl(item.href) ? 'page' : undefined
+              "
+            >
               <component
                 :is="item.icon"
                 class="h-4 w-4"
@@ -62,10 +68,10 @@ const { isCurrentOrParentUrl } = useCurrentUrl();
         </nav>
       </aside>
 
-      <Separator class="my-6 lg:hidden" />
+      <Separator class="my-4 lg:hidden" />
 
       <div class="flex-1 md:max-w-2xl">
-        <section class="max-w-xl space-y-12">
+        <section class="max-w-xl space-y-6">
           <slot />
         </section>
       </div>
