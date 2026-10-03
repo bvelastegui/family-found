@@ -40,7 +40,6 @@ const props = defineProps<{
   yearTotalCents: number;
   hasConfiguredPeriods: boolean;
   totalCents: number;
-  pendingTransactionId: number | null;
 }>();
 const paidCount = computed(
   () => props.periods.filter((period) => period.status === 'paid').length,
@@ -98,27 +97,11 @@ defineOptions({
           <p class="text-xs text-muted-foreground">En todos los años</p>
         </div>
         <div class="min-w-0 border-s ps-3 sm:ps-4">
-          <p class="text-xs text-muted-foreground sm:text-sm">Estado</p>
-          <Link
-            v-if="pendingTransactionId"
-            class="mt-1 block truncate text-sm font-medium underline underline-offset-4"
-            :href="transactionShow(pendingTransactionId)"
-          >
-            Comprobante #{{ pendingTransactionId }} pendiente
-          </Link>
-          <p
-            v-else
-            class="mt-1 text-sm font-medium"
-          >
-            Al día
+          <p class="text-xs text-muted-foreground sm:text-sm">Cuotas pagadas</p>
+          <p class="mt-1 text-xl font-semibold tabular-nums sm:text-2xl">
+            {{ paidCount }}/{{ configuredCount }}
           </p>
-          <p class="text-xs text-muted-foreground">
-            {{
-              pendingTransactionId
-                ? 'Esperando aprobación'
-                : 'Sin aportes pendientes'
-            }}
-          </p>
+          <p class="text-xs text-muted-foreground">En {{ year }}</p>
         </div>
       </div>
     </section>
@@ -220,56 +203,64 @@ defineOptions({
       </p>
       <ol
         v-else
-        class="grid grid-cols-1 gap-2 sm:grid-cols-2 sm:gap-3 lg:grid-cols-4"
+        class="flex flex-col gap-3"
       >
         <li
           v-for="period in displayedPeriods"
           :key="period.month"
-          class="flex items-center gap-3 rounded-lg border px-3 py-3 sm:items-start sm:p-4"
-          :class="
-            period.status === 'paid'
-              ? 'border-primary/20 bg-primary/[0.035]'
-              : ''
-          "
         >
           <component
-            :is="
-              period.status === 'paid'
-                ? CircleCheck
-                : period.status === 'pending'
-                  ? Clock3
-                  : CalendarDays
+            :is="period.transaction_id ? Link : 'div'"
+            v-bind="
+              period.transaction_id
+                ? { href: transactionShow(period.transaction_id) }
+                : {}
             "
-            class="mt-0.5 size-5 shrink-0"
+            class="flex items-center gap-3 rounded-xl border bg-background px-3 py-3"
             :class="
-              period.status === 'paid'
-                ? 'text-primary'
-                : 'text-muted-foreground'
+              period.transaction_id
+                ? 'transition-colors hover:bg-muted/30 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none focus-visible:ring-inset'
+                : ''
             "
-            aria-hidden="true"
-          />
-          <div class="min-w-0 flex-1">
-            <h3 class="font-medium capitalize">
-              {{ fundMonth(period.month) }}
-            </h3>
-            <p class="mt-1 text-sm text-muted-foreground">
-              {{ period.amount_cents !== null ? usd(period.amount_cents) : '' }}
-            </p>
-            <FundStatus
-              :status="period.status"
-              class="mt-1.5"
-            />
-            <p
-              v-if="period.transaction_id"
-              class="mt-2 text-sm"
+          >
+            <span
+              class="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary"
+              aria-hidden="true"
             >
-              <Link
-                :href="transactionShow(period.transaction_id)"
-                class="underline underline-offset-4"
-                >Ver comprobante</Link
+              <component
+                :is="
+                  period.status === 'paid'
+                    ? CircleCheck
+                    : period.status === 'pending'
+                      ? Clock3
+                      : CalendarDays
+                "
+                class="size-4"
+              />
+            </span>
+            <div class="min-w-0 flex-1">
+              <h3 class="text-sm font-semibold capitalize">
+                {{ fundMonth(period.month) }}
+              </h3>
+              <p
+                v-if="period.transaction_id"
+                class="text-xs text-muted-foreground"
               >
-            </p>
-          </div>
+                Comprobante #{{ period.transaction_id }}
+              </p>
+            </div>
+            <div class="flex shrink-0 flex-col items-end gap-1">
+              <p class="text-sm font-semibold text-primary tabular-nums">
+                {{
+                  period.amount_cents !== null ? usd(period.amount_cents) : ''
+                }}
+              </p>
+              <FundStatus
+                :status="period.status"
+                subtle
+              />
+            </div>
+          </component>
         </li>
       </ol>
     </section>

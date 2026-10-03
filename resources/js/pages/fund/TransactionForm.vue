@@ -122,19 +122,10 @@ const selectedInstallments = computed(() =>
   ),
 );
 const remaining = computed(() => entered.value - allocated.value);
-const evidenceSize = computed(() =>
-  evidence.value
-    ? evidence.value.size < 1024 * 1024
-      ? `${Math.max(1, Math.round(evidence.value.size / 1024))} KB`
-      : `${(evidence.value.size / 1024 / 1024).toFixed(1)} MB`
-    : '',
-);
 
 watch(evidence, (file) => {
   if (preview.value) URL.revokeObjectURL(preview.value);
-  preview.value = file?.type.startsWith('image/')
-    ? URL.createObjectURL(file)
-    : null;
+  preview.value = file ? URL.createObjectURL(file) : null;
 });
 onMounted(async () => {
   if (!props.sharedEvidence || sharedEvidenceApplied.value) return;
@@ -300,18 +291,21 @@ function next(): void {
 
 <template>
   <main
-    class="mx-auto flex w-full max-w-2xl flex-col gap-6 p-4 sm:gap-8 sm:p-6"
+    class="mx-auto flex w-full max-w-2xl flex-col gap-4 p-4 pb-48 sm:gap-6 sm:p-6"
   >
     <Head title="Registrar transferencia" />
-    <div>
-      <h1 class="text-2xl font-semibold tracking-tight sm:text-3xl">
+    <header class="flex items-center gap-3">
+      <Link
+        :href="transactionsIndex()"
+        class="inline-flex size-10 shrink-0 items-center justify-center rounded-md hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring sm:size-11"
+        aria-label="Cancelar y volver a transacciones"
+      >
+        <ArrowLeft class="size-5" />
+      </Link>
+      <h1 class="text-xl font-semibold tracking-tight sm:text-3xl">
         Registrar transferencia
       </h1>
-      <p class="mt-2 text-sm text-muted-foreground">
-        Registra tu depósito en tres pasos. Se acreditará cuando el tesorero lo
-        apruebe.
-      </p>
-    </div>
+    </header>
     <nav aria-label="Pasos del registro">
       <ol class="flex items-start">
         <li
@@ -365,7 +359,7 @@ function next(): void {
       </ol>
     </nav>
     <form
-      class="flex flex-col gap-6"
+      class="flex flex-col gap-4 sm:gap-6"
       novalidate
       @submit.prevent="step < 3 ? next() : submit()"
     >
@@ -376,7 +370,7 @@ function next(): void {
         <h2
           ref="stepHeading"
           tabindex="-1"
-          class="mt-1 scroll-mt-6 text-xl font-semibold outline-none"
+          class="mt-1 scroll-mt-4 text-lg font-semibold outline-none sm:text-xl"
         >
           {{ steps[step - 1].title }}
         </h2>
@@ -386,7 +380,7 @@ function next(): void {
       </div>
       <div
         v-if="step === 1"
-        class="grid gap-5 sm:grid-cols-2"
+        class="grid gap-4 sm:grid-cols-2"
       >
         <div class="flex flex-col gap-2 sm:col-span-2">
           <span class="text-sm font-medium">Archivo del comprobante</span>
@@ -394,7 +388,7 @@ function next(): void {
             for="receipt"
             :class="
               cn(
-                'relative flex min-h-36 cursor-pointer flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed bg-muted/20 p-5 text-center transition-colors focus-within:border-ring focus-within:ring-2 focus-within:ring-ring/50 hover:bg-muted/40',
+                'relative flex min-h-28 cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border border-dashed bg-muted/20 p-3 text-center transition-colors focus-within:border-ring focus-within:ring-2 focus-within:ring-ring/50 hover:bg-muted/40',
                 form.errors.evidence && 'border-destructive',
               )
             "
@@ -414,15 +408,16 @@ function next(): void {
               @change="chooseEvidence"
             />
             <img
-              v-if="preview"
+              v-if="preview && evidence?.type.startsWith('image/')"
               :src="preview"
               alt="Vista previa del comprobante seleccionado"
-              class="max-h-44 max-w-full rounded-md object-contain"
+              class="max-h-[55vh] w-full rounded-md object-contain"
             />
-            <FileText
-              v-else-if="evidence"
-              class="size-8 text-muted-foreground"
-              aria-hidden="true"
+            <iframe
+              v-else-if="preview && evidence?.type === 'application/pdf'"
+              :src="preview"
+              title="Comprobante seleccionado"
+              class="h-[55vh] w-full rounded-md bg-background"
             />
             <Upload
               v-else
@@ -434,13 +429,11 @@ function next(): void {
                 evidence ? 'Cambiar comprobante' : 'Adjuntar comprobante'
               }}</span>
               <span
-                v-if="evidence"
-                class="truncate text-sm"
-                >{{ evidence.name }}</span
+                v-if="!evidence"
+                class="text-sm text-muted-foreground"
               >
-              <span class="text-sm text-muted-foreground">{{
-                evidence ? evidenceSize : 'Toca para elegir una foto o un PDF'
-              }}</span>
+                Toca para elegir una foto o un PDF
+              </span>
             </span>
           </label>
           <div class="flex items-center justify-between gap-3">
@@ -502,7 +495,7 @@ function next(): void {
             id="reference"
             v-model="form.reference"
             required
-            class="h-12"
+            class="h-12 text-base!"
             maxlength="191"
             autocomplete="off"
             autocapitalize="off"
@@ -529,7 +522,7 @@ function next(): void {
             v-model="form.transaction_date"
             type="date"
             required
-            class="h-12"
+            class="h-12 min-w-0 text-base!"
             :aria-invalid="!!form.errors.transaction_date"
             :aria-describedby="
               form.errors.transaction_date ? 'date-error' : undefined
@@ -553,7 +546,7 @@ function next(): void {
             inputmode="decimal"
             required
             placeholder="25.00"
-            class="h-12"
+            class="h-12 text-base!"
             :aria-invalid="!!form.errors.amount"
             :aria-describedby="form.errors.amount ? 'amount-error' : undefined"
           />
@@ -827,7 +820,7 @@ function next(): void {
         />
       </div>
       <div
-        class="sticky bottom-0 -mx-4 flex flex-col gap-2 border-t bg-background/95 px-4 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))] backdrop-blur-sm sm:static sm:mx-0 sm:border-0 sm:bg-background sm:p-0"
+        class="fixed inset-x-0 bottom-[calc(4rem+env(safe-area-inset-bottom))] z-30 flex flex-col gap-2 border-t bg-background px-4 py-3 sm:static sm:mx-0 sm:border-0 sm:bg-background sm:p-0"
       >
         <div class="flex items-center gap-3">
           <Button
@@ -868,12 +861,6 @@ function next(): void {
             >{{ form.processing ? 'Enviando…' : 'Enviar a revisión' }}</Button
           >
         </div>
-        <Link
-          v-if="!form.processing"
-          :href="transactionsIndex()"
-          class="flex min-h-11 items-center justify-center text-sm text-muted-foreground underline underline-offset-4"
-          >Cancelar</Link
-        >
       </div>
     </form>
   </main>

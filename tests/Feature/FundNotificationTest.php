@@ -49,7 +49,8 @@ test('rejection alerts only the transaction owner and notifications cannot be re
     $this->actingAs($other)->patch(route('fund.notifications.read', $notification->id))->assertNotFound();
     $this->actingAs($other)->get(route('fund.notifications.index'))->assertInertia(fn (Assert $page) => $page
         ->component('fund/Notifications')->where('notifications.total', 0));
-    $this->actingAs($member)->patch(route('fund.notifications.read', $notification->id))->assertRedirect();
+    $this->actingAs($member)->patch(route('fund.notifications.read', ['notification' => $notification->id, 'open' => true]))
+        ->assertRedirect(route('fund.transactions.show', $transaction, false));
     $this->assertNotNull($notification->fresh()->read_at);
     $this->actingAs($treasurer)->patch(route('fund.notifications.read-all'))->assertRedirect();
     $this->assertSame(0, $treasurer->unreadNotifications()->count());
@@ -63,7 +64,7 @@ test('push subscriptions are owned by their account and invalid endpoints are re
     $this->get(route('fund.notifications.index'))->assertRedirect(route('login'));
     $this->post(route('fund.push-subscriptions.store'), $payload)->assertRedirect(route('login'));
     $this->actingAs($member)->post(route('fund.push-subscriptions.store'), [...$payload, 'endpoint' => 'http://example.test/invalid'])->assertSessionHasErrors('endpoint');
-    $this->actingAs($treasurer)->post(route('fund.push-subscriptions.store'), $payload)->assertRedirect(route('fund.notifications.index'));
+    $this->actingAs($treasurer)->post(route('fund.push-subscriptions.store'), $payload)->assertRedirect(route('profile.edit'));
     $this->assertDatabaseHas('push_subscriptions', ['endpoint' => $endpoint, 'subscribable_id' => $treasurer->id]);
     $this->actingAs($member)->post(route('fund.push-subscriptions.store'), $payload)->assertSessionHasErrors('endpoint');
     $this->actingAs($member)->delete(route('fund.push-subscriptions.destroy'), ['endpoint' => $endpoint])->assertRedirect();

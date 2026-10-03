@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue';
-import { Head, useForm } from '@inertiajs/vue3';
+import { Head, Link, useForm } from '@inertiajs/vue3';
 import { dashboard } from '@/routes';
 import { index as treasuryIndex } from '@/routes/fund/treasury';
 import {
@@ -11,6 +11,14 @@ import {
 } from '@/routes/fund/treasury/participants';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Plus } from '@lucide/vue';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '@/components/ui/dialog';
 import {
   Card,
   CardContent,
@@ -38,7 +46,7 @@ type Invitation = {
   status: 'pending' | 'accepted' | 'cancelled' | 'expired' | 'superseded';
   created_at: string;
 };
-defineProps<{
+const props = defineProps<{
   participants: Pagination<{
     id: number;
     name: string;
@@ -46,6 +54,7 @@ defineProps<{
     created_at: string;
   }>;
   invitations: Pagination<Invitation>;
+  filters: { invitation_status: string };
 }>();
 defineOptions({
   layout: {
@@ -58,6 +67,10 @@ defineOptions({
 });
 
 const mode = ref<'invite' | 'direct'>('invite');
+const activeTab = ref<'participants' | 'invitations'>(
+  props.filters.invitation_status ? 'invitations' : 'participants',
+);
+const showingAddParticipant = ref(false);
 const cancellation = useForm({ idempotency_key: operationKey() });
 const cancellingId = ref<number | null>(null);
 const cancellationError = ref('');
@@ -80,6 +93,8 @@ function submitInvitation(): void {
     onSuccess: () => {
       invitation.reset('email');
       invitation.idempotency_key = operationKey();
+      showingAddParticipant.value = false;
+      activeTab.value = 'invitations';
     },
   });
 }
@@ -89,6 +104,8 @@ function submitDirect(): void {
     onSuccess: () => {
       direct.reset('name', 'email');
       direct.idempotency_key = operationKey();
+      showingAddParticipant.value = false;
+      activeTab.value = 'participants';
     },
   });
 }
@@ -118,119 +135,193 @@ function cancelPendingInvitation(invite: Invitation): void {
   <main class="mx-auto flex w-full max-w-5xl flex-col gap-6 p-4 md:p-8">
     <Head title="Participantes" />
     <AppPageHeader title="Participantes" />
-
-    <div
-      class="flex flex-wrap gap-2"
-      role="group"
-      aria-label="Forma de incorporación"
-    >
-      <Button
-        type="button"
-        :variant="mode === 'invite' ? 'default' : 'outline'"
-        :aria-pressed="mode === 'invite'"
-        @click="mode = 'invite'"
-        >Enviar invitación</Button
+    <div class="flex flex-wrap items-center justify-between gap-3">
+      <div
+        class="flex gap-2"
+        role="group"
+        aria-label="Vista de participantes"
       >
+        <Button
+          type="button"
+          class="min-h-11 rounded-full"
+          :variant="activeTab === 'participants' ? 'default' : 'outline'"
+          :aria-pressed="activeTab === 'participants'"
+          @click="activeTab = 'participants'"
+          >Cuentas · {{ participants.total }}</Button
+        >
+        <Button
+          type="button"
+          class="min-h-11 rounded-full"
+          :variant="activeTab === 'invitations' ? 'default' : 'outline'"
+          :aria-pressed="activeTab === 'invitations'"
+          @click="activeTab = 'invitations'"
+          >Invitaciones · {{ invitations.total }}</Button
+        >
+      </div>
       <Button
-        type="button"
-        :variant="mode === 'direct' ? 'default' : 'outline'"
-        :aria-pressed="mode === 'direct'"
-        @click="mode = 'direct'"
-        >Crear cuenta directamente</Button
+        class="hidden min-h-11 md:inline-flex"
+        @click="showingAddParticipant = true"
+        >Añadir participante</Button
       >
     </div>
 
-    <Card v-if="mode === 'invite'">
-      <CardHeader
-        ><CardTitle>Invitar a una persona</CardTitle
-        ><CardDescription
-          >Enviaremos un enlace personal al correo indicado. Vence en siete días
-          y puede utilizarse una sola vez.</CardDescription
-        ></CardHeader
-      >
-      <CardContent
-        ><form
-          class="flex flex-wrap items-end gap-3"
-          @submit.prevent="submitInvitation"
-        >
-          <div class="flex min-w-52 flex-1 flex-col gap-2">
-            <Label for="invite-email">Correo electrónico</Label
-            ><Input
-              id="invite-email"
-              v-model="invitation.email"
-              type="email"
-              autocomplete="email"
-              required
-              :aria-invalid="!!invitation.errors.email"
-            />
-            <p
-              v-if="invitation.errors.email"
-              role="alert"
-              class="text-sm text-destructive"
-            >
-              {{ invitation.errors.email }}
-            </p>
-          </div>
-          <Button :disabled="invitation.processing">Enviar invitación</Button>
-        </form></CardContent
-      >
-    </Card>
-
-    <Card v-else>
-      <CardHeader
-        ><CardTitle>Crear cuenta</CardTitle
-        ><CardDescription
-          >Indica nombre y correo. Enviaremos un enlace para que la persona
-          defina su contraseña; no tendrás acceso a ella.</CardDescription
-        ></CardHeader
-      >
-      <CardContent
-        ><form
-          class="grid gap-4 sm:grid-cols-2"
-          @submit.prevent="submitDirect"
-        >
-          <div class="flex flex-col gap-2">
-            <Label for="direct-name">Nombre completo</Label
-            ><Input
-              id="direct-name"
-              v-model="direct.name"
-              required
-              :aria-invalid="!!direct.errors.name"
-            />
-            <p
-              v-if="direct.errors.name"
-              role="alert"
-              class="text-sm text-destructive"
-            >
-              {{ direct.errors.name }}
-            </p>
-          </div>
-          <div class="flex flex-col gap-2">
-            <Label for="direct-email">Correo electrónico</Label
-            ><Input
-              id="direct-email"
-              v-model="direct.email"
-              type="email"
-              autocomplete="email"
-              required
-              :aria-invalid="!!direct.errors.email"
-            />
-            <p
-              v-if="direct.errors.email"
-              role="alert"
-              class="text-sm text-destructive"
-            >
-              {{ direct.errors.email }}
-            </p>
-          </div>
-          <Button :disabled="direct.processing"
-            >Crear cuenta y enviar acceso</Button
+    <Dialog v-model:open="showingAddParticipant">
+      <DialogContent class="max-h-[85dvh] overflow-y-auto sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle>Añadir participante</DialogTitle>
+          <DialogDescription
+            >Invita por correo o crea una cuenta con nombre y
+            correo.</DialogDescription
           >
-        </form></CardContent
-      >
-    </Card>
+        </DialogHeader>
+
+        <div
+          class="grid grid-cols-2 gap-1 rounded-lg bg-muted p-1"
+          role="tablist"
+          aria-label="Forma de incorporación"
+        >
+          <Button
+            type="button"
+            role="tab"
+            id="invite-tab"
+            aria-controls="invite-panel"
+            class="min-h-11 rounded-md border-0 text-sm whitespace-normal"
+            :class="
+              mode === 'invite'
+                ? 'bg-background text-foreground shadow-sm'
+                : 'bg-transparent text-muted-foreground shadow-none'
+            "
+            variant="ghost"
+            :aria-selected="mode === 'invite'"
+            @click="mode = 'invite'"
+            >Invitar por correo</Button
+          >
+          <Button
+            type="button"
+            role="tab"
+            id="direct-tab"
+            aria-controls="direct-panel"
+            class="min-h-11 rounded-md border-0 text-sm whitespace-normal"
+            :class="
+              mode === 'direct'
+                ? 'bg-background text-foreground shadow-sm'
+                : 'bg-transparent text-muted-foreground shadow-none'
+            "
+            variant="ghost"
+            :aria-selected="mode === 'direct'"
+            @click="mode = 'direct'"
+            >Crear cuenta</Button
+          >
+        </div>
+
+        <section
+          v-if="mode === 'invite'"
+          id="invite-panel"
+          role="tabpanel"
+          aria-labelledby="invite-tab"
+          class="space-y-4"
+        >
+          <header class="space-y-1">
+            <h2 class="text-lg font-semibold">Invitar a una persona</h2>
+            <p class="text-sm text-muted-foreground">
+              Enviaremos un enlace personal al correo indicado. Vence en siete
+              días y puede utilizarse una sola vez.
+            </p>
+          </header>
+          <div>
+            <form
+              class="flex flex-wrap items-end gap-3"
+              @submit.prevent="submitInvitation"
+            >
+              <div class="flex min-w-52 flex-1 flex-col gap-2">
+                <Label for="invite-email">Correo electrónico</Label
+                ><Input
+                  id="invite-email"
+                  v-model="invitation.email"
+                  type="email"
+                  autocomplete="email"
+                  required
+                  :aria-invalid="!!invitation.errors.email"
+                />
+                <p
+                  v-if="invitation.errors.email"
+                  role="alert"
+                  class="text-sm text-destructive"
+                >
+                  {{ invitation.errors.email }}
+                </p>
+              </div>
+              <Button :disabled="invitation.processing"
+                >Enviar invitación</Button
+              >
+            </form>
+          </div>
+        </section>
+
+        <section
+          v-else
+          id="direct-panel"
+          role="tabpanel"
+          aria-labelledby="direct-tab"
+          class="space-y-4"
+        >
+          <header class="space-y-1">
+            <h2 class="text-lg font-semibold">Crear cuenta</h2>
+            <p class="text-sm text-muted-foreground">
+              Indica nombre y correo. Enviaremos un enlace para que la persona
+              defina su contraseña; no tendrás acceso a ella.
+            </p>
+          </header>
+          <div>
+            <form
+              class="grid gap-4 sm:grid-cols-2"
+              @submit.prevent="submitDirect"
+            >
+              <div class="flex flex-col gap-2">
+                <Label for="direct-name">Nombre completo</Label
+                ><Input
+                  id="direct-name"
+                  v-model="direct.name"
+                  required
+                  :aria-invalid="!!direct.errors.name"
+                />
+                <p
+                  v-if="direct.errors.name"
+                  role="alert"
+                  class="text-sm text-destructive"
+                >
+                  {{ direct.errors.name }}
+                </p>
+              </div>
+              <div class="flex flex-col gap-2">
+                <Label for="direct-email">Correo electrónico</Label
+                ><Input
+                  id="direct-email"
+                  v-model="direct.email"
+                  type="email"
+                  autocomplete="email"
+                  required
+                  :aria-invalid="!!direct.errors.email"
+                />
+                <p
+                  v-if="direct.errors.email"
+                  role="alert"
+                  class="text-sm text-destructive"
+                >
+                  {{ direct.errors.email }}
+                </p>
+              </div>
+              <Button :disabled="direct.processing"
+                >Crear cuenta y enviar acceso</Button
+              >
+            </form>
+          </div>
+        </section>
+      </DialogContent>
+    </Dialog>
 
     <section
+      v-if="activeTab === 'participants'"
       class="flex flex-col gap-3"
       aria-labelledby="registered-heading"
     >
@@ -248,15 +339,15 @@ function cancelPendingInvitation(invite: Invitation): void {
       </p>
       <ul
         v-else
-        class="divide-y rounded-lg border"
+        class="flex flex-col gap-3"
       >
         <li
           v-for="user in participants.data"
           :key="user.id"
-          class="flex flex-wrap justify-between gap-2 p-3 text-sm"
+          class="flex min-w-0 flex-col gap-1 rounded-xl border p-3 text-sm"
         >
           <span class="font-medium">{{ user.name }}</span
-          ><span class="text-muted-foreground">{{ user.email }}</span>
+          ><span class="break-all text-muted-foreground">{{ user.email }}</span>
         </li>
       </ul>
       <FundPagination
@@ -266,9 +357,37 @@ function cancelPendingInvitation(invite: Invitation): void {
       />
     </section>
     <section
+      v-if="activeTab === 'invitations'"
       class="flex flex-col gap-3"
       aria-labelledby="invitations-heading"
     >
+      <nav
+        class="flex gap-2 overflow-x-auto pb-1"
+        aria-label="Filtrar invitaciones por estado"
+      >
+        <Link
+          v-for="option in [
+            { label: 'Todas', value: '' },
+            { label: 'En espera', value: 'pending' },
+            { label: 'Canceladas', value: 'cancelled' },
+            { label: 'Vencidas', value: 'expired' },
+          ]"
+          :key="option.value"
+          :href="
+            participantsIndex({ query: { invitation_status: option.value } })
+          "
+          preserve-scroll
+          preserve-state
+          class="inline-flex min-h-11 shrink-0 items-center rounded-full border px-3 text-sm"
+          :class="
+            filters.invitation_status === option.value
+              ? 'border-primary bg-primary text-primary-foreground'
+              : 'bg-background text-muted-foreground'
+          "
+          @click="activeTab = 'invitations'"
+          >{{ option.label }}</Link
+        >
+      </nav>
       <div class="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h2
@@ -304,7 +423,50 @@ function cancelPendingInvitation(invite: Invitation): void {
         v-else
         class="overflow-x-auto rounded-lg border"
       >
-        <table class="w-full min-w-[760px] text-left text-sm">
+        <ul class="divide-y md:hidden">
+          <li
+            v-for="invite in invitations.data"
+            :key="invite.id"
+            class="flex flex-col gap-3 p-3"
+          >
+            <p class="text-sm font-medium break-all">{{ invite.email }}</p>
+            <Badge
+              class="self-start"
+              :variant="invite.status === 'pending' ? 'secondary' : 'outline'"
+              >{{ invitationStatuses[invite.status] }}</Badge
+            >
+            <dl class="grid gap-2 text-xs text-muted-foreground">
+              <div>
+                <dt>Enviada</dt>
+                <dd>{{ fundDateTime(invite.created_at) }}</dd>
+              </div>
+              <div>
+                <dt>Vencimiento</dt>
+                <dd>{{ fundDateTime(invite.expires_at) }}</dd>
+              </div>
+              <div v-if="invite.cancelled_at">
+                <dt>Cancelada</dt>
+                <dd>{{ fundDateTime(invite.cancelled_at) }}</dd>
+              </div>
+            </dl>
+            <Button
+              v-if="invite.status === 'pending'"
+              class="min-h-11"
+              variant="outline"
+              :disabled="cancellation.processing"
+              :aria-label="`Cancelar invitación a ${invite.email}`"
+              @click="cancelPendingInvitation(invite)"
+            >
+              <Spinner v-if="cancellingId === invite.id" />
+              {{
+                cancellingId === invite.id
+                  ? 'Cancelando…'
+                  : 'Cancelar invitación'
+              }}
+            </Button>
+          </li>
+        </ul>
+        <table class="hidden w-full min-w-[760px] text-left text-sm md:table">
           <caption class="sr-only">
             Historial de invitaciones y acciones disponibles
           </caption>
@@ -406,5 +568,13 @@ function cancelPendingInvitation(invite: Invitation): void {
         label="Páginas de invitaciones"
       />
     </section>
+    <Button
+      class="fixed right-4 bottom-[calc(5rem+env(safe-area-inset-bottom))] z-30 size-14 rounded-full shadow-lg md:hidden"
+      size="icon"
+      aria-label="Añadir participante"
+      @click="showingAddParticipant = true"
+    >
+      <Plus class="size-6" />
+    </Button>
   </main>
 </template>

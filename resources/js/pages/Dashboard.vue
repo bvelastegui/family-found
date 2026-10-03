@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Head, Link } from '@inertiajs/vue3';
+import { Plus } from '@lucide/vue';
 import { dashboard } from '@/routes';
 import {
   create as newTransaction,
@@ -16,7 +17,6 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import FundStatCard from '@/components/FundStatCard.vue';
 import AppPageHeader from '@/components/AppPageHeader.vue';
 import { fundDate, fundMonth, usd } from '@/lib/fund';
@@ -29,7 +29,6 @@ defineProps<{
   isAdministrator: boolean;
   contributedCents: number;
   nextContribution: { month: string; amount_cents: number } | null;
-  pendingContributionId: number | null;
   pendingTransactions: {
     id: number;
     amount_cents: number;
@@ -55,7 +54,7 @@ defineProps<{
 
 <template>
   <main
-    class="mx-auto flex w-full max-w-6xl flex-col gap-6 p-4 md:gap-8 md:p-8"
+    class="mx-auto flex w-full max-w-6xl flex-col gap-4 p-3 pb-24 sm:gap-6 sm:p-4 sm:pb-24 md:gap-8 md:p-8"
   >
     <Head title="Inicio" />
     <AppPageHeader title="Tu inicio">
@@ -68,23 +67,12 @@ defineProps<{
         </Button>
       </template>
     </AppPageHeader>
-    <Alert v-if="pendingContributionId"
-      ><AlertTitle>Aporte en revisión</AlertTitle
-      ><AlertDescription
-        >Tu comprobante está pendiente de conciliación. Aún no se ha acreditado
-        al fondo.
-        <Link
-          class="font-medium underline underline-offset-4"
-          :href="transactionShow(pendingContributionId)"
-          >Ver comprobante</Link
-        ></AlertDescription
-      ></Alert
-    >
     <div
-      class="grid gap-4 md:grid-cols-2"
+      class="-mx-3 flex snap-x snap-mandatory gap-3 overflow-x-auto px-3 pb-2 md:mx-0 md:grid md:snap-none md:grid-cols-2 md:gap-4 md:overflow-visible md:px-0 md:pb-0"
       :class="{ 'lg:grid-cols-3': isTreasurer }"
     >
       <FundStatCard
+        class="min-w-[84vw] snap-start md:min-w-0"
         label="Próximo aporte"
         :value="
           nextContribution ? usd(nextContribution.amount_cents) : 'Sin cuota'
@@ -106,6 +94,7 @@ defineProps<{
         >
       </FundStatCard>
       <FundStatCard
+        class="min-w-[84vw] snap-start md:min-w-0"
         label="Mis aportes"
         :value="usd(contributedCents)"
         badge="Aprobados"
@@ -114,6 +103,7 @@ defineProps<{
       />
       <FundStatCard
         v-if="isTreasurer && balances"
+        class="min-w-[84vw] snap-start md:min-w-0"
         label="Por conciliar"
         :value="String(pendingReviewCount)"
         badge="Pendientes"
@@ -130,17 +120,17 @@ defineProps<{
       </FundStatCard>
     </div>
     <div
-      class="grid gap-4"
+      class="grid gap-3 sm:gap-4"
       :class="{ 'lg:grid-cols-2': upcomingInstallments.length > 0 }"
     >
       <Card
-        ><CardHeader
-          ><CardTitle>Transferencias en revisión</CardTitle
+        ><CardHeader class="px-4 pt-4 pb-2 sm:p-6"
+          ><CardTitle>Movimientos pendientes de aprobación</CardTitle
           ><CardDescription
             >Los movimientos se contabilizan cuando el tesorero los
             aprueba</CardDescription
           ></CardHeader
-        ><CardContent
+        ><CardContent class="px-4 pt-0 pb-4 sm:p-6"
           ><p
             v-if="!pendingTransactions.length"
             class="text-sm text-muted-foreground"
@@ -167,12 +157,12 @@ defineProps<{
           </ul></CardContent
         ></Card
       ><Card v-if="upcomingInstallments.length > 0"
-        ><CardHeader
+        ><CardHeader class="px-4 pt-4 pb-2 sm:p-6"
           ><CardTitle>Próximas cuotas de préstamo</CardTitle
           ><CardDescription
             >Cuotas pendientes ordenadas por vencimiento</CardDescription
           ></CardHeader
-        ><CardContent
+        ><CardContent class="px-4 pt-0 pb-4 sm:p-6"
           ><ul class="divide-y">
             <li
               v-for="item in upcomingInstallments"
@@ -208,5 +198,17 @@ defineProps<{
         >Consultar mis préstamos</Link
       >
     </p>
+    <Button
+      class="fixed right-4 bottom-[calc(5rem+env(safe-area-inset-bottom))] z-30 size-14 rounded-full shadow-lg sm:hidden"
+      size="icon"
+      as-child
+    >
+      <Link
+        :href="newTransaction()"
+        aria-label="Registrar transferencia"
+      >
+        <Plus class="size-6" />
+      </Link>
+    </Button>
   </main>
 </template>

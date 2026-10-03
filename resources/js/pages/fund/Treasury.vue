@@ -79,7 +79,9 @@ defineOptions({
 </script>
 
 <template>
-  <main class="mx-auto flex w-full max-w-6xl flex-col gap-8 p-4 md:p-8">
+  <main
+    class="mx-auto flex w-full max-w-6xl flex-col gap-6 p-4 md:gap-8 md:p-8"
+  >
     <Head title="Resumen de tesorería" />
     <AppPageHeader title="Resumen del fondo">
       <template #actions>
@@ -94,6 +96,15 @@ defineOptions({
         </Button>
       </template>
     </AppPageHeader>
+    <Link
+      :href="reconciliationIndex()"
+      class="flex min-h-12 items-center justify-between gap-3 rounded-xl border px-3 py-3 text-sm font-medium sm:hidden"
+    >
+      <span>Conciliación</span>
+      <span class="rounded-full bg-primary/10 px-3 py-1 text-primary"
+        >{{ pendingCount }} pendientes</span
+      >
+    </Link>
     <section
       aria-labelledby="balances-title"
       class="flex flex-col gap-4"
@@ -104,7 +115,24 @@ defineOptions({
       >
         Estado del fondo
       </h2>
-      <div class="overflow-x-auto rounded-lg border">
+      <dl class="flex flex-col gap-3 md:hidden">
+        <div
+          v-for="balance in balances"
+          :key="balance.label"
+          class="flex items-start justify-between gap-3 rounded-xl border px-3 py-3"
+        >
+          <div class="min-w-0">
+            <dt class="text-sm font-medium">{{ balance.label }}</dt>
+            <p class="mt-1 text-xs text-muted-foreground">
+              {{ balance.detail }}
+            </p>
+          </div>
+          <dd class="shrink-0 text-sm font-semibold text-primary tabular-nums">
+            {{ usd(balance.value) }}
+          </dd>
+        </div>
+      </dl>
+      <div class="hidden overflow-x-auto rounded-lg border md:block">
         <table class="w-full min-w-lg text-left text-sm">
           <caption class="sr-only">
             Saldos del fondo en dólares
@@ -177,6 +205,41 @@ defineOptions({
         No hay períodos configurados para mostrar.
       </p>
       <figure v-else>
+        <ul
+          class="flex flex-col gap-4 md:hidden"
+          aria-label="Aportes esperados y aprobados por mes"
+        >
+          <li
+            v-for="month in contributionChart"
+            :key="month.month"
+            class="space-y-2"
+          >
+            <div class="flex items-center justify-between gap-3 text-sm">
+              <p class="font-medium capitalize">{{ fundMonth(month.month) }}</p>
+              <p class="text-right text-xs text-muted-foreground tabular-nums">
+                {{ usd(month.received_cents) }} de
+                {{ usd(month.expected_cents) }}
+              </p>
+            </div>
+            <div
+              class="flex flex-col gap-1"
+              aria-hidden="true"
+            >
+              <div class="h-2 overflow-hidden rounded-full bg-muted">
+                <div
+                  class="h-full rounded-full bg-muted-foreground/50"
+                  :style="{ width: barHeight(month.expected_cents) }"
+                />
+              </div>
+              <div class="h-2 overflow-hidden rounded-full bg-muted">
+                <div
+                  class="h-full rounded-full bg-primary"
+                  :style="{ width: barHeight(month.received_cents) }"
+                />
+              </div>
+            </div>
+          </li>
+        </ul>
         <div class="mb-4 flex flex-wrap gap-x-5 gap-y-2 text-sm">
           <span class="flex items-center gap-2"
             ><span
@@ -191,7 +254,7 @@ defineOptions({
             />Aprobado</span
           >
         </div>
-        <div class="overflow-x-auto">
+        <div class="hidden overflow-x-auto md:block">
           <div
             class="flex min-w-[36rem] items-end gap-4 border-b pb-3"
             aria-hidden="true"

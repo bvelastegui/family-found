@@ -22,7 +22,7 @@ class PushSubscriptionController extends Controller
             $data['endpoint'], $data['keys']['p256dh'], $data['keys']['auth'], $data['content_encoding'] ?? 'aes128gcm',
         );
 
-        return to_route('fund.notifications.index');
+        return to_route('profile.edit');
     }
 
     public function destroy(Request $request): RedirectResponse
@@ -30,6 +30,6 @@ class PushSubscriptionController extends Controller
         $data = $request->validate(['endpoint' => ['required', 'url', 'starts_with:https://', 'max:1024']]);
         $request->user()->deletePushSubscription($data['endpoint']);
 
-        return to_route('fund.notifications.index');
+        return to_route('profile.edit');
     }
 }

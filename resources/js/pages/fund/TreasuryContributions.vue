@@ -8,7 +8,6 @@ import { show as transactionShow } from '@/routes/fund/transactions';
 import FundPagination from '@/components/FundPagination.vue';
 import AppPageHeader from '@/components/AppPageHeader.vue';
 import FundStatus from '@/components/FundStatus.vue';
-import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { fundMonth, usd, type FundPagination as Pagination } from '@/lib/fund';
@@ -54,42 +53,53 @@ defineOptions({
     <Head title="Aportes de tesorería" />
     <AppPageHeader title="Aportes" />
     <form
-      class="flex flex-wrap items-end gap-3"
+      class="flex flex-col gap-3"
       @submit.prevent="filter"
     >
-      <div class="flex flex-col gap-2">
+      <div class="flex min-w-0 flex-col gap-2">
         <Label for="contribution-month">Mes</Label
         ><Input
           id="contribution-month"
           v-model="month"
           type="month"
+          class="h-11 min-w-0"
           required
           @change="filter"
         />
       </div>
-      <div class="flex flex-col gap-2">
-        <Label for="contribution-status">Estado</Label>
-        <select
-          id="contribution-status"
-          v-model="status"
-          class="h-9 rounded-md border bg-background px-3 text-sm"
-          @change="filter"
-        >
-          <option value="">Todos</option>
-          <option value="paid">Pagado</option>
-          <option value="pending">En revisión</option>
-          <option value="unpaid">Pendiente</option>
-          <option value="not_applicable">No aplica</option>
-        </select>
-      </div>
-      <Button
-        type="submit"
-        variant="outline"
-        >Consultar</Button
+      <div
+        class="flex gap-2 overflow-x-auto pb-1"
+        role="group"
+        aria-label="Filtrar aportes por estado"
       >
+        <button
+          v-for="option in [
+            { label: 'Todos', value: '' },
+            { label: 'Pagado', value: 'paid' },
+            { label: 'Por conciliar', value: 'pending' },
+            { label: 'Sin pago', value: 'unpaid' },
+            { label: 'No aplica', value: 'not_applicable' },
+          ]"
+          :key="option.value"
+          type="button"
+          class="min-h-11 shrink-0 rounded-full border px-3 text-sm transition-colors focus-visible:ring-2 focus-visible:ring-ring"
+          :class="
+            status === option.value
+              ? 'border-primary bg-primary text-primary-foreground'
+              : 'bg-background text-muted-foreground hover:bg-accent'
+          "
+          :aria-pressed="status === option.value"
+          @click="
+            status = option.value;
+            filter();
+          "
+        >
+          {{ option.label }}
+        </button>
+      </div>
       <p
         v-if="amountCents !== null"
-        class="py-2 text-sm text-muted-foreground"
+        class="text-sm text-muted-foreground"
       >
         Cuota de {{ fundMonth(filters.month) }}: {{ usd(amountCents) }}
       </p>
@@ -101,7 +111,75 @@ defineOptions({
       No hay una cuota configurada para este mes.
     </p>
     <template v-else>
-      <div class="overflow-x-auto rounded-lg border">
+      <p
+        v-if="!participants.data.length"
+        class="py-6 text-center text-sm text-muted-foreground md:hidden"
+      >
+        No hay participantes con este estado.
+      </p>
+      <ul
+        v-else
+        class="flex flex-col gap-3 md:hidden"
+      >
+        <li
+          v-for="person in participants.data"
+          :key="person.id"
+        >
+          <component
+            :is="person.transaction_id ? Link : 'div'"
+            v-bind="
+              person.transaction_id
+                ? {
+                    href: transactionShow(person.transaction_id, {
+                      query: { return_to: page.url },
+                    }),
+                  }
+                : {}
+            "
+            class="flex flex-col gap-3 rounded-xl border px-3 py-3"
+            :class="
+              person.transaction_id
+                ? 'transition-colors hover:bg-muted/30 focus-visible:ring-2 focus-visible:ring-ring'
+                : ''
+            "
+          >
+            <div class="flex items-start justify-between gap-3">
+              <div class="min-w-0">
+                <p class="text-sm font-semibold break-words">
+                  {{ person.name }}
+                </p>
+                <p class="truncate text-xs text-muted-foreground">
+                  {{ person.email }}
+                </p>
+              </div>
+              <FundStatus
+                :status="person.status"
+                :label="
+                  person.status === 'pending'
+                    ? 'Por conciliar'
+                    : person.status === 'unpaid'
+                      ? 'Sin pago'
+                      : undefined
+                "
+                subtle
+              />
+            </div>
+            <p class="flex items-center justify-between gap-3 text-sm">
+              <span class="text-muted-foreground">Cuota del mes</span>
+              <span class="font-medium tabular-nums">{{
+                usd(person.expected_cents)
+              }}</span>
+            </p>
+            <p
+              v-if="person.transaction_id"
+              class="text-xs text-muted-foreground"
+            >
+              Comprobante #{{ person.transaction_id }}
+            </p>
+          </component>
+        </li>
+      </ul>
+      <div class="hidden overflow-x-auto rounded-lg border md:block">
         <table class="w-full min-w-[760px] text-left text-sm">
           <caption class="sr-only">
             Aportes de
@@ -121,19 +199,7 @@ defineOptions({
                 scope="col"
                 class="px-4 py-3 text-right font-medium"
               >
-                Esperado
-              </th>
-              <th
-                scope="col"
-                class="px-4 py-3 text-right font-medium"
-              >
-                Aprobado
-              </th>
-              <th
-                scope="col"
-                class="px-4 py-3 text-right font-medium"
-              >
-                Pendiente
+                Cuota del mes
               </th>
               <th
                 scope="col"
@@ -168,15 +234,16 @@ defineOptions({
               <td class="px-4 py-3 text-right tabular-nums">
                 {{ usd(person.expected_cents) }}
               </td>
-              <td class="px-4 py-3 text-right tabular-nums">
-                {{ usd(person.approved_cents) }}
-              </td>
-              <td class="px-4 py-3 text-right font-medium tabular-nums">
-                {{ usd(person.pending_cents) }}
-              </td>
               <td class="px-4 py-3">
                 <FundStatus
                   :status="person.status"
+                  :label="
+                    person.status === 'pending'
+                      ? 'Por conciliar'
+                      : person.status === 'unpaid'
+                        ? 'Sin pago'
+                        : undefined
+                  "
                   subtle
                 />
               </td>
@@ -200,7 +267,7 @@ defineOptions({
             </tr>
             <tr v-if="!participants.data.length">
               <td
-                colspan="6"
+                colspan="4"
                 class="p-8 text-center text-muted-foreground"
               >
                 No hay participantes con este estado.

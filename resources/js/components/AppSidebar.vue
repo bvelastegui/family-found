@@ -61,18 +61,20 @@ const roles = computed(
 );
 const mainNavItems = computed<NavItem[]>(() => {
   const url = page.url.split('?')[0];
+  const homeHref = contributionsIndex();
+
   return [
     {
       title: 'Inicio',
-      href: dashboard(),
+      href: homeHref,
       icon: LayoutDashboard,
-      isActive: url === dashboard().url,
+      isActive: url === homeHref.url,
     },
     {
-      title: 'Mis aportes',
-      href: contributionsIndex(),
-      icon: CalendarDays,
-      isActive: url.startsWith(contributionsIndex().url),
+      title: 'Perfil',
+      href: profileEdit(),
+      icon: Settings2,
+      isActive: url.startsWith('/settings'),
     },
     {
       title: 'Mis transacciones',
@@ -155,33 +157,20 @@ const moreNavItems = computed<NavItem[]>(() => [
     icon: Settings2,
     isActive: page.url.split('?')[0].startsWith('/settings'),
   },
+  ...(!roles.value?.treasurer
+    ? [
+        {
+          title: 'Mis préstamos',
+          href: loansIndex(),
+          icon: Wallet,
+          isActive: page.url.split('?')[0].startsWith(loansIndex().url),
+        },
+      ]
+    : []),
   ...(roles.value?.treasurer ? treasuryNavItems.value : []),
   ...(roles.value?.auditor ? auditNavItems.value : []),
 ]);
-const mobileNavItems = computed<NavItem[]>(() => {
-  const url = page.url.split('?')[0];
-
-  return [
-    {
-      title: 'Inicio',
-      href: dashboard(),
-      icon: LayoutDashboard,
-      isActive: url === dashboard().url,
-    },
-    {
-      title: 'Mis aportes',
-      href: contributionsIndex(),
-      icon: CalendarDays,
-      isActive: url.startsWith(contributionsIndex().url),
-    },
-    {
-      title: 'Mis transacciones',
-      href: transactionsIndex(),
-      icon: ReceiptText,
-      isActive: url.startsWith(transactionsIndex().url),
-    },
-  ];
-});
+const mobileNavItems = mainNavItems;
 
 watch(
   () => page.url,

@@ -20,11 +20,22 @@ class FundParticipantController extends Controller
     {
         abort_unless(FundSetting::current()->isTreasurer($request->user()), 403);
 
+        $validated = $request->validate([
+            'invitation_status' => ['sometimes', 'nullable', 'in:pending,cancelled,expired'],
+        ]);
+        $status = $validated['invitation_status'] ?? '';
+        $latestId = '(SELECT MAX(latest_invitation.id) FROM fund_invitations AS latest_invitation WHERE latest_invitation.email = fund_invitations.email)';
+        $statusExpression = "CASE WHEN used_at IS NOT NULL THEN 'accepted' WHEN cancelled_at IS NOT NULL THEN 'cancelled' WHEN expires_at <= ? THEN 'expired' WHEN id <> {$latestId} THEN 'superseded' ELSE 'pending' END";
+        $now = now();
+
         return Inertia::render('fund/Participants', [
             'participants' => User::query()->orderBy('name')->paginate(15, ['id', 'name', 'email', 'created_at'])->withQueryString(),
             'invitations' => FundInvitation::query()
                 ->select(['id', 'email', 'invited_by_id', 'expires_at', 'used_at', 'cancelled_at', 'created_at'])
                 ->selectSub(FundInvitation::query()->from('fund_invitations as latest_invitation')->selectRaw('MAX(latest_invitation.id)')->whereColumn('latest_invitation.email', 'fund_invitations.email'), 'latest_invitation_id')
+                ->whereRaw("({$statusExpression}) IN ('pending', 'cancelled', 'expired')", [$now])
+                ->when($status !== '', fn ($query) => $query->whereRaw("({$statusExpression}) = ?", [$now, $status]))
+                ->orderByRaw("CASE WHEN ({$statusExpression}) = 'pending' THEN 0 ELSE 1 END", [$now])
                 ->latest('id')->paginate(10, ['*'], 'invitations')->withQueryString()
                 ->through(function (FundInvitation $invitation): array {
                     $status = match (true) {
@@ -37,6 +48,7 @@ class FundParticipantController extends Controller
 
                     return [...$invitation->only(['id', 'email', 'expires_at', 'used_at', 'cancelled_at', 'created_at']), 'status' => $status];
                 }),
+            'filters' => ['invitation_status' => $status],
         ]);
     }
 

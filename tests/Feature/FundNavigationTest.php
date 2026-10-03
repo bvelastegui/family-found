@@ -22,9 +22,10 @@ test('the authenticated start highlights the first unpaid period without countin
         'amount' => '25.00', 'period_ids' => [(int) $period->id], 'installment_ids' => [],
     ], UploadedFile::fake()->create('comprobante.pdf', 1, 'application/pdf'));
 
-    $this->actingAs($member)->get(route('dashboard'))->assertInertia(fn (Assert $page) => $page
-        ->component('Dashboard')->where('contributedCents', 0)->where('pendingContributionId', $transaction)
-        ->where('pendingTransactions.0.id', $transaction)->where('nextContribution.month', substr((string) $period->month, 0, 7)));
+    $this->actingAs($member)->get(route('dashboard'))->assertRedirect(route('fund.contributions.index'));
+    $this->actingAs($member)->get(route('fund.contributions.index'))->assertInertia(fn (Assert $page) => $page
+        ->component('fund/Contributions')->where('totalCents', 0)
+        ->missing('pendingTransactions')->missing('upcomingInstallments')->missing('hasLoans'));
     $this->actingAs($member)->get(route('fund.index'))->assertRedirect(route('dashboard'));
     $this->assertDatabaseCount('journal_entries', 0);
 });
@@ -205,10 +206,8 @@ test('treasury and correction screens remain protected after treasurer handover'
     $this->actingAs($member)->get(route('fund.treasury.index'))->assertOk();
     $this->actingAs($member)->get(route('fund.treasury.contributions.index'))->assertOk();
     $this->actingAs($member)->get(route('fund.treasury.reconciliation.index'))->assertOk();
-    $this->actingAs($administrator)->get(route('dashboard'))->assertInertia(fn (Assert $page) => $page
-        ->component('Dashboard')->where('fundRoles.administrator', true)->where('fundRoles.treasurer', false));
-    $this->actingAs($member)->get(route('dashboard'))->assertInertia(fn (Assert $page) => $page
-        ->component('Dashboard')->where('fundRoles.administrator', false)->where('fundRoles.treasurer', true));
+    $this->actingAs($administrator)->get(route('dashboard'))->assertRedirect(route('fund.contributions.index'));
+    $this->actingAs($member)->get(route('dashboard'))->assertRedirect(route('fund.contributions.index'));
     $this->actingAs($administrator)->get(route('fund.contribution-periods.index'))->assertForbidden();
     $this->actingAs($administrator)->get(route('fund.banks.index'))->assertForbidden();
     $this->actingAs($member)->get(route('fund.banks.index'))->assertOk();

@@ -4,7 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { CircleCheck, CircleX, Clock, Minus } from '@lucide/vue';
 
 const props = withDefaults(
-  defineProps<{ status: string; subtle?: boolean }>(),
+  defineProps<{ status: string; subtle?: boolean; label?: string }>(),
   { subtle: false },
 );
 const icon = computed(() =>
@@ -18,7 +18,8 @@ const icon = computed(() =>
 );
 const label = computed(
   () =>
-    ({
+    props.label ??
+    {
       pending: 'Pendiente',
       approved: 'Aprobada',
       rejected: 'Rechazada',
@@ -34,7 +35,8 @@ const label = computed(
       superseded: 'Sustituido',
       locked: 'Fijada por una transacción',
       unavailable: 'Mes no editable',
-    })[props.status] ?? props.status,
+    }[props.status] ??
+    props.status,
 );
 const variant = computed(() =>
   props.status === 'rejected'

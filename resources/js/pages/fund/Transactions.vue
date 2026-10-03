@@ -12,7 +12,6 @@ import {
 } from '@/routes/fund/transactions';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import FundPagination from '@/components/FundPagination.vue';
 import FundStatus from '@/components/FundStatus.vue';
 import AppPageHeader from '@/components/AppPageHeader.vue';
@@ -66,6 +65,7 @@ const hasFilters =
   props.filters.search !== '';
 
 function filter(): void {
+  clearTimeout(searchTimeout);
   router.get(
     listingRoute().url,
     {
@@ -73,15 +73,11 @@ function filter(): void {
       ...(type.value ? { type: type.value } : {}),
       ...(search.value.trim() ? { search: search.value.trim() } : {}),
     },
-    { replace: true },
+    { replace: true, preserveState: true, preserveScroll: true },
   );
 }
 
 watch(search, (value) => {
-  if (!props.reconciliation) {
-    return;
-  }
-
   clearTimeout(searchTimeout);
   searchTimeout = setTimeout(() => {
     router.get(
@@ -128,72 +124,9 @@ onBeforeUnmount(() => clearTimeout(searchTimeout));
       />
     </section>
 
-    <form
-      v-if="!reconciliation"
-      class="grid grid-cols-1 gap-3 sm:flex sm:flex-wrap sm:items-end"
-      role="search"
-      @submit.prevent="filter"
-    >
-      <div class="flex min-w-0 flex-col gap-2 sm:min-w-48 sm:flex-1">
-        <Label for="transaction-search">
-          Buscar comprobante o banco<span v-if="reconciliation"
-            >, o participante</span
-          >
-        </Label>
-        <Input
-          id="transaction-search"
-          v-model="search"
-          maxlength="100"
-          type="search"
-          placeholder="Número de comprobante o banco"
-        />
-      </div>
-      <div class="flex flex-col gap-2 sm:min-w-32">
-        <Label for="status-filter">Estado</Label
-        ><select
-          id="status-filter"
-          v-model="status"
-          class="h-11 w-full rounded-md border bg-background px-3 text-sm sm:h-9 sm:w-auto"
-          @change="filter"
-        >
-          <option value="">Todos</option>
-          <option value="pending">Pendiente</option>
-          <option value="approved">Aprobados</option>
-          <option value="rejected">Rechazados</option>
-        </select>
-      </div>
-      <div class="flex flex-col gap-2 sm:min-w-32">
-        <Label for="type-filter">Destino</Label
-        ><select
-          id="type-filter"
-          v-model="type"
-          class="h-11 w-full rounded-md border bg-background px-3 text-sm sm:h-9 sm:w-auto"
-          @change="filter"
-        >
-          <option value="">Todos</option>
-          <option value="contribution">Aportes</option>
-          <option value="loan">Préstamos</option>
-        </select>
-      </div>
-      <Button
-        type="submit"
-        class="h-11 w-full sm:w-auto"
-        >Buscar</Button
-      >
-      <Button
-        v-if="hasFilters"
-        variant="outline"
-        class="h-11 w-full sm:w-auto"
-        as-child
-        ><Link :href="listingRoute()">Limpiar</Link></Button
-      >
-    </form>
-
-    <form
-      v-if="reconciliation"
+    <div
       class="relative z-10 flex items-center gap-2 rounded-full border bg-background px-3 py-1.5 shadow-md"
       role="search"
-      @submit.prevent="filter"
     >
       <Input
         id="transaction-search"
@@ -202,7 +135,11 @@ onBeforeUnmount(() => clearTimeout(searchTimeout));
         type="search"
         class="h-9 min-w-0 flex-1 border-0 bg-background! px-1 shadow-none focus-visible:bg-background! focus-visible:ring-0 focus-visible:ring-offset-0"
         placeholder="Buscar..."
-        aria-label="Buscar comprobante, banco o participante"
+        :aria-label="
+          reconciliation
+            ? 'Buscar comprobante, banco o participante'
+            : 'Buscar comprobante o banco'
+        "
       />
       <select
         id="type-filter"
@@ -215,10 +152,9 @@ onBeforeUnmount(() => clearTimeout(searchTimeout));
         <option value="contribution">Aportes</option>
         <option value="loan">Préstamos</option>
       </select>
-    </form>
+    </div>
 
     <nav
-      v-if="reconciliation"
       class="-mt-2 flex gap-2 overflow-x-auto pb-1"
       aria-label="Filtrar por estado"
     >
@@ -263,11 +199,11 @@ onBeforeUnmount(() => clearTimeout(searchTimeout));
       </p>
       <div
         v-else
-        class="rounded-lg border"
+        class="min-w-0"
       >
         <table
           v-if="!reconciliation"
-          class="w-full min-w-[900px] text-left text-sm"
+          class="hidden w-full text-left text-sm md:table"
         >
           <caption class="sr-only">
             Historial de transacciones
@@ -367,14 +303,18 @@ onBeforeUnmount(() => clearTimeout(searchTimeout));
           </tbody>
         </table>
         <div
-          v-if="reconciliation"
-          class="divide-y"
+          class="flex flex-col gap-3"
+          :class="!reconciliation ? 'md:hidden' : ''"
         >
           <Link
             v-for="item in transactions.data"
             :key="item.id"
-            :href="transactionShow(item.id, { query: { return_to: page.url } })"
-            class="flex flex-col gap-2.5 px-3 py-3 transition-colors hover:bg-muted/30 focus-visible:bg-muted/30 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none focus-visible:ring-inset"
+            :href="
+              transactionShow(item.id, {
+                query: reconciliation ? { return_to: page.url } : {},
+              })
+            "
+            class="flex flex-col gap-2.5 rounded-xl border bg-background px-3 py-3 transition-colors hover:bg-muted/30 focus-visible:bg-muted/30 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none focus-visible:ring-inset"
             :aria-label="`Ver transacción ${item.reference} de ${item.user.name}, ${usd(item.amount_cents)}, ${item.status}`"
           >
             <div class="flex items-start justify-between gap-3">
@@ -394,7 +334,9 @@ onBeforeUnmount(() => clearTimeout(searchTimeout));
                 </span>
                 <div class="min-w-0">
                   <p class="truncate text-sm font-semibold">
-                    {{ item.user.name }}
+                    {{
+                      reconciliation ? item.user.name : item.destination_label
+                    }}
                   </p>
                   <p class="truncate text-xs text-muted-foreground">
                     {{ item.bank_name }} · {{ item.reference }}

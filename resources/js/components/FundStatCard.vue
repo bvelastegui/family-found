@@ -22,7 +22,7 @@ defineProps<{
   <Card
     class="@container/card bg-linear-to-t from-primary/5 to-card shadow-xs dark:from-primary/10"
   >
-    <CardHeader>
+    <CardHeader class="px-4 pt-4 pb-2 sm:p-6">
       <CardDescription>{{ label }}</CardDescription>
       <CardTitle
         class="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl"
@@ -33,7 +33,9 @@ defineProps<{
         <Badge variant="outline">{{ badge }}</Badge>
       </CardAction>
     </CardHeader>
-    <CardFooter class="flex-col items-start gap-1.5 text-sm">
+    <CardFooter
+      class="flex-col items-start gap-1.5 px-4 pt-0 pb-4 text-sm sm:px-6 sm:pb-6"
+    >
       <p class="font-medium">{{ headline }}</p>
       <p class="text-muted-foreground">{{ detail }}</p>
       <slot name="footer" />

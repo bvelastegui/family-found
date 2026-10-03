@@ -181,6 +181,6 @@ test('the invitation list exposes server calculated statuses without exposing to
 
     $this->actingAs($treasurer)->get(route('fund.treasury.participants.index'))->assertInertia(fn (Assert $page) => $page
         ->where('invitations.data.0.status', 'cancelled')
-        ->where('invitations.data.1.status', 'superseded')
+        ->where('invitations.total', 1)
         ->missing('invitations.data.0.token_hash'));
 });

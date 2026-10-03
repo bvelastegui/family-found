@@ -66,7 +66,6 @@ class FundContributionController extends Controller
             'yearTotalCents' => $periods->where('status', 'paid')->sum('amount_cents'),
             'hasConfiguredPeriods' => $firstMonth !== null,
             'totalCents' => $balances->account(JournalAccount::Contributions, $user->id),
-            'pendingTransactionId' => $pending?->id,
         ]);
     }
 }

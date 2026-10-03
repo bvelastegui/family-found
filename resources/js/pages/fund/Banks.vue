@@ -54,16 +54,17 @@ function toggleBank(item: Bank): void {
   <main class="mx-auto flex w-full max-w-4xl flex-col gap-6 p-4 md:p-8">
     <Head title="Bancos" />
     <AppPageHeader title="Bancos" />
-    <Card
-      ><CardHeader
-        ><CardTitle>Agregar banco</CardTitle
-        ><CardDescription
-          >Los usuarios seleccionarán un banco activo al registrar su
-          transferencia.</CardDescription
-        ></CardHeader
-      ><CardContent
-        ><form
-          class="flex flex-wrap items-end gap-3"
+    <section class="space-y-4 border-b pb-6">
+      <header class="space-y-1">
+        <h2 class="text-lg font-semibold">Agregar banco</h2>
+        <p class="text-sm text-muted-foreground">
+          Los usuarios seleccionarán un banco activo al registrar su
+          transferencia.
+        </p>
+      </header>
+      <div>
+        <form
+          class="flex flex-col gap-3 sm:flex-row sm:items-end"
           @submit.prevent="
             form.post(saveBank().url, {
               onSuccess: () => {
@@ -73,11 +74,12 @@ function toggleBank(item: Bank): void {
             })
           "
         >
-          <div class="flex min-w-48 flex-1 flex-col gap-2">
+          <div class="flex min-w-0 flex-1 flex-col gap-2">
             <Label for="bank-name">Nombre del banco</Label
             ><Input
               id="bank-name"
               v-model="form.name"
+              class="h-11 text-base!"
               required
               :aria-invalid="!!form.errors.name"
             />
@@ -88,10 +90,14 @@ function toggleBank(item: Bank): void {
               {{ form.errors.name }}
             </p>
           </div>
-          <Button :disabled="form.processing">Añadir banco</Button>
-        </form></CardContent
-      ></Card
-    >
+          <Button
+            class="min-h-11"
+            :disabled="form.processing"
+            >Añadir banco</Button
+          >
+        </form>
+      </div>
+    </section>
     <Card
       ><CardHeader><CardTitle>Catálogo</CardTitle></CardHeader
       ><CardContent
@@ -110,7 +116,7 @@ function toggleBank(item: Bank): void {
             :key="item.id"
             class="flex flex-wrap items-center justify-between gap-2 py-3"
           >
-            <div>
+            <div class="min-w-0 flex-1">
               <p class="font-medium">{{ item.name }}</p>
               <p class="text-xs text-muted-foreground">
                 {{
@@ -122,6 +128,7 @@ function toggleBank(item: Bank): void {
             </div>
             <Button
               size="sm"
+              class="min-h-11"
               variant="outline"
               :disabled="updating.processing"
               @click="toggleBank(item)"

@@ -21,14 +21,20 @@ class FundNotificationController extends Controller
                     'created_at' => $notification->created_at,
                     'read_at' => $notification->read_at,
                 ]),
-            'vapidPublicKey' => (string) config('webpush.vapid.public_key'),
-            'subscribedEndpoints' => $request->user()->pushSubscriptions()->pluck('endpoint'),
         ]);
     }
 
     public function read(Request $request, string $notification): RedirectResponse
     {
-        $request->user()->notifications()->findOrFail($notification)->markAsRead();
+        $notice = $request->user()->notifications()->findOrFail($notification);
+        $notice->markAsRead();
+
+        if ($request->boolean('open')) {
+            $url = $notice->data['url'];
+            abort_unless(is_string($url) && str_starts_with($url, '/') && ! str_starts_with($url, '//'), 404);
+
+            return redirect($url);
+        }
 
         return back();
     }

@@ -80,16 +80,16 @@ function cancelEdit(): void {
     <Head title="Cuotas del fondo" />
     <AppPageHeader title="Cuotas mensuales" />
 
-    <Card>
-      <CardHeader
-        ><CardTitle>Configurar un rango de meses</CardTitle
-        ><CardDescription
-          >El mismo importe se aplica a todos los meses entre el inicio y el
-          fin, inclusive. Si un mes ya fue utilizado o no admite cambios, el
-          sistema no guardará ninguno.</CardDescription
-        ></CardHeader
-      >
-      <CardContent>
+    <section class="space-y-4 border-b pb-6">
+      <header class="space-y-1">
+        <h2 class="text-lg font-semibold">Configurar un rango de meses</h2>
+        <p class="text-sm text-muted-foreground">
+          El mismo importe se aplica a todos los meses entre el inicio y el fin,
+          inclusive. Si un mes ya fue utilizado o no admite cambios, el sistema
+          no guardará ninguno.
+        </p>
+      </header>
+      <div>
         <form
           class="grid gap-4 sm:grid-cols-2"
           @submit.prevent="
@@ -158,19 +158,24 @@ function cancelEdit(): void {
           </p>
           <Button :disabled="rangeForm.processing">Guardar rango</Button>
         </form>
-      </CardContent>
-    </Card>
+      </div>
+    </section>
 
-    <Card v-if="selectedPeriod">
-      <CardHeader
-        ><CardTitle>Editar {{ fundMonth(selectedPeriod.month) }}</CardTitle
-        ><CardDescription
-          >Solo pueden cambiarse cuotas futuras que no aparezcan en una
-          transacción registrada.</CardDescription
-        ></CardHeader
-      >
-      <CardContent
-        ><form
+    <section
+      v-if="selectedPeriod"
+      class="space-y-4 border-b pb-6"
+    >
+      <header class="space-y-1">
+        <h2 class="text-lg font-semibold">
+          Editar {{ fundMonth(selectedPeriod.month) }}
+        </h2>
+        <p class="text-sm text-muted-foreground">
+          Solo pueden cambiarse cuotas futuras que no aparezcan en una
+          transacción registrada.
+        </p>
+      </header>
+      <div>
+        <form
           class="flex flex-wrap items-end gap-3"
           @submit.prevent="
             editForm.post(savePeriod().url, { onSuccess: () => cancelEdit() })
@@ -202,9 +207,9 @@ function cancelEdit(): void {
             @click="cancelEdit"
             >Cancelar</Button
           >
-        </form></CardContent
-      >
-    </Card>
+        </form>
+      </div>
+    </section>
 
     <section
       class="flex flex-col gap-4"
@@ -222,7 +227,41 @@ function cancelEdit(): void {
         v-else
         class="overflow-x-auto rounded-lg border"
       >
-        <table class="w-full min-w-[540px] text-left text-sm">
+        <ul class="flex flex-col divide-y md:hidden">
+          <li
+            v-for="period in periods.data"
+            :key="period.id"
+            class="space-y-3 p-3"
+          >
+            <div class="flex items-center justify-between gap-3 text-sm">
+              <span class="font-medium capitalize">{{
+                fundMonth(period.month)
+              }}</span>
+              <span class="font-semibold tabular-nums">{{
+                usd(period.amount_cents)
+              }}</span>
+            </div>
+            <div class="flex flex-wrap items-center justify-between gap-2">
+              <FundStatus
+                :status="
+                  period.locked_at
+                    ? 'locked'
+                    : period.editable
+                      ? 'upcoming'
+                      : 'unavailable'
+                "
+              />
+              <Button
+                v-if="period.editable"
+                class="min-h-11"
+                variant="outline"
+                @click="edit(period)"
+                >Editar cuota</Button
+              >
+            </div>
+          </li>
+        </ul>
+        <table class="hidden w-full min-w-[540px] text-left text-sm md:table">
           <caption class="sr-only">
             Aportes mensuales definidos por Tesorería
           </caption>

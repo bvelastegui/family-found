@@ -3,6 +3,7 @@ import { Form, Head, usePage } from '@inertiajs/vue3';
 import { computed } from 'vue';
 import ProfileController from '@/actions/App/Http/Controllers/Settings/ProfileController';
 import Heading from '@/components/Heading.vue';
+import DeviceNotificationsSettings from '@/components/DeviceNotificationsSettings.vue';
 import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -21,6 +22,7 @@ defineOptions({
 });
 
 const page = usePage();
+defineProps<{ vapidPublicKey: string; subscribedEndpoints: string[] }>();
 const user = computed(() => page.props.auth.user);
 </script>
 
@@ -84,5 +86,9 @@ const user = computed(() => page.props.auth.user);
         >
       </div>
     </Form>
+    <DeviceNotificationsSettings
+      :vapid-public-key="vapidPublicKey"
+      :subscribed-endpoints="subscribedEndpoints"
+    />
   </div>
 </template>
