@@ -5,6 +5,7 @@ import { dashboard } from '@/routes';
 import { index as treasuryIndex } from '@/routes/fund/treasury';
 import { index as reconciliationIndex } from '@/routes/fund/treasury/reconciliation';
 import { Button } from '@/components/ui/button';
+import AppPageHeader from '@/components/AppPageHeader.vue';
 import { fundMonth, usd } from '@/lib/fund';
 
 const props = defineProps<{
@@ -80,23 +81,19 @@ defineOptions({
 <template>
   <main class="mx-auto flex w-full max-w-6xl flex-col gap-8 p-4 md:p-8">
     <Head title="Resumen de tesorería" />
-    <header class="flex flex-wrap items-center justify-between gap-4">
-      <div>
-        <p class="text-sm text-muted-foreground">Tesorería</p>
-        <h1 class="text-3xl font-semibold tracking-tight">Resumen del fondo</h1>
-        <p class="mt-1 text-muted-foreground">
-          Saldos aprobados y evolución de los aportes.
-        </p>
-      </div>
-      <Button
-        as-child
-        variant="outline"
-      >
-        <Link :href="reconciliationIndex()"
-          >Conciliación · {{ pendingCount }} pendientes</Link
+    <AppPageHeader title="Resumen del fondo">
+      <template #actions>
+        <Button
+          class="hidden sm:inline-flex"
+          as-child
+          variant="outline"
         >
-      </Button>
-    </header>
+          <Link :href="reconciliationIndex()"
+            >Conciliación · {{ pendingCount }} pendientes</Link
+          >
+        </Button>
+      </template>
+    </AppPageHeader>
     <section
       aria-labelledby="balances-title"
       class="flex flex-col gap-4"

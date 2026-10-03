@@ -6,6 +6,7 @@ import { index as treasuryIndex } from '@/routes/fund/treasury';
 import { index as contributionsIndex } from '@/routes/fund/treasury/contributions';
 import { show as transactionShow } from '@/routes/fund/transactions';
 import FundPagination from '@/components/FundPagination.vue';
+import AppPageHeader from '@/components/AppPageHeader.vue';
 import FundStatus from '@/components/FundStatus.vue';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -51,13 +52,7 @@ defineOptions({
 <template>
   <main class="mx-auto flex w-full max-w-6xl flex-col gap-6 p-4 md:p-8">
     <Head title="Aportes de tesorería" />
-    <header>
-      <p class="text-sm text-muted-foreground">Tesorería</p>
-      <h1 class="text-3xl font-semibold tracking-tight">Aportes</h1>
-      <p class="mt-1 text-muted-foreground">
-        Seguimiento mensual de todos los participantes del fondo.
-      </p>
-    </header>
+    <AppPageHeader title="Aportes" />
     <form
       class="flex flex-wrap items-end gap-3"
       @submit.prevent="filter"

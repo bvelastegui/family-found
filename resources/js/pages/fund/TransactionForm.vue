@@ -142,7 +142,9 @@ onMounted(async () => {
   try {
     const contents = props.sharedEvidence.contents;
     const binary = atob(contents);
-    const bytes = Uint8Array.from(binary, (character) => character.charCodeAt(0));
+    const bytes = Uint8Array.from(binary, (character) =>
+      character.charCodeAt(0),
+    );
     const file = new File([bytes], props.sharedEvidence.name, {
       type: props.sharedEvidence.mime,
     });

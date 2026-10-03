@@ -10,6 +10,7 @@ import {
 } from '@/routes/fund/contribution-periods';
 import FundPagination from '@/components/FundPagination.vue';
 import FundStatus from '@/components/FundStatus.vue';
+import AppPageHeader from '@/components/AppPageHeader.vue';
 import {
   Card,
   CardContent,
@@ -77,14 +78,7 @@ function cancelEdit(): void {
 <template>
   <main class="mx-auto flex w-full max-w-4xl flex-col gap-6 p-4 md:p-8">
     <Head title="Cuotas del fondo" />
-    <header>
-      <p class="text-sm text-muted-foreground">Tesorería</p>
-      <h1 class="text-3xl font-semibold tracking-tight">Cuotas mensuales</h1>
-      <p class="mt-1 text-muted-foreground">
-        Define un monto común para cada mes. El período más antiguo configurado
-        marca el inicio del fondo.
-      </p>
-    </header>
+    <AppPageHeader title="Cuotas mensuales" />
 
     <Card>
       <CardHeader

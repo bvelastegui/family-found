@@ -18,6 +18,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import FundStatCard from '@/components/FundStatCard.vue';
+import AppPageHeader from '@/components/AppPageHeader.vue';
 import { fundDate, fundMonth, usd } from '@/lib/fund';
 
 defineOptions({
@@ -57,18 +58,16 @@ defineProps<{
     class="mx-auto flex w-full max-w-6xl flex-col gap-6 p-4 md:gap-8 md:p-8"
   >
     <Head title="Inicio" />
-    <header class="flex flex-wrap items-center justify-between gap-4">
-      <div>
-        <p class="text-sm font-medium text-muted-foreground">Fondo Familiar</p>
-        <h1 class="text-3xl font-semibold tracking-tight">Tu inicio</h1>
-        <p class="mt-1 text-muted-foreground">
-          Consulta qué necesita tu atención y continúa donde quedaste.
-        </p>
-      </div>
-      <Button as-child
-        ><Link :href="newTransaction()">Registrar transferencia</Link></Button
-      >
-    </header>
+    <AppPageHeader title="Tu inicio">
+      <template #actions>
+        <Button
+          class="hidden sm:inline-flex"
+          as-child
+        >
+          <Link :href="newTransaction()">Registrar transferencia</Link>
+        </Button>
+      </template>
+    </AppPageHeader>
     <Alert v-if="pendingContributionId"
       ><AlertTitle>Aporte en revisión</AlertTitle
       ><AlertDescription

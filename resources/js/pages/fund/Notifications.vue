@@ -22,6 +22,7 @@ import {
 import FundPagination from '@/components/FundPagination.vue';
 import { fundDateTime, type FundPagination as Pagination } from '@/lib/fund';
 import { canInstall, installApp } from '@/lib/pwa';
+import AppPageHeader from '@/components/AppPageHeader.vue';
 
 type Notice = {
   id: string;
@@ -186,12 +187,10 @@ async function disablePush(): Promise<void> {
 <template>
   <main class="mx-auto flex w-full max-w-4xl flex-col gap-6 p-4 md:p-8">
     <Head title="Notificaciones" />
-    <header>
-      <h1 class="text-3xl font-semibold tracking-tight">Notificaciones</h1>
-      <p class="mt-1 text-muted-foreground">
-        Avisos sobre comprobantes y decisiones de conciliación.
-      </p>
-    </header>
+    <AppPageHeader
+      title="Notificaciones"
+      :show-notifications="false"
+    />
     <Card v-if="!installed">
       <CardHeader>
         <CardTitle>Instalar Fondo Familiar</CardTitle>

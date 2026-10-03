@@ -19,6 +19,7 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import FundPagination from '@/components/FundPagination.vue';
+import AppPageHeader from '@/components/AppPageHeader.vue';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
@@ -116,14 +117,7 @@ function cancelPendingInvitation(invite: Invitation): void {
 <template>
   <main class="mx-auto flex w-full max-w-5xl flex-col gap-6 p-4 md:p-8">
     <Head title="Participantes" />
-    <header>
-      <p class="text-sm text-muted-foreground">Tesorería</p>
-      <h1 class="text-3xl font-semibold tracking-tight">Participantes</h1>
-      <p class="mt-1 text-muted-foreground">
-        Invita por correo o crea una cuenta directamente. Solo su propietario
-        establecerá la contraseña.
-      </p>
-    </header>
+    <AppPageHeader title="Participantes" />
 
     <div
       class="flex flex-wrap gap-2"

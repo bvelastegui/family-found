@@ -42,7 +42,13 @@ import {
   controls as auditControls,
 } from '@/routes/fund/audit';
 import type { NavItem } from '@/types';
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from '@/components/ui/sheet';
 
 const page = usePage();
 const { isMobile, setOpenMobile } = useSidebar();
@@ -242,8 +248,17 @@ watch(
       :aria-current="item.isActive ? 'page' : undefined"
       @click="setOpenMobile(false)"
     >
-      <component :is="item.icon" class="size-5" />
-      <span>{{ item.title === 'Mis aportes' ? 'Aportes' : item.title === 'Mis transacciones' ? 'Transacciones' : item.title }}</span>
+      <component
+        :is="item.icon"
+        class="size-5"
+      />
+      <span>{{
+        item.title === 'Mis aportes'
+          ? 'Aportes'
+          : item.title === 'Mis transacciones'
+            ? 'Transacciones'
+            : item.title
+      }}</span>
     </Link>
     <button
       type="button"
@@ -257,10 +272,15 @@ watch(
     </button>
   </nav>
   <Sheet v-model:open="isMoreMenuOpen">
-    <SheetContent side="bottom" class="max-h-[80vh] rounded-t-2xl px-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
+    <SheetContent
+      side="bottom"
+      class="max-h-[80vh] rounded-t-2xl px-4 pb-[max(1rem,env(safe-area-inset-bottom))]"
+    >
       <SheetHeader class="px-0 text-left">
         <SheetTitle>Más opciones</SheetTitle>
-        <SheetDescription>Tu cuenta y opciones disponibles del fondo</SheetDescription>
+        <SheetDescription
+          >Tu cuenta y opciones disponibles del fondo</SheetDescription
+        >
       </SheetHeader>
       <div class="mt-3 grid gap-1 overflow-y-auto">
         <Link
@@ -268,11 +288,16 @@ watch(
           :key="item.title"
           :href="item.href"
           class="flex min-h-12 items-center gap-3 rounded-md px-3 text-sm hover:bg-accent"
-          :class="item.isActive ? 'bg-accent font-medium text-accent-foreground' : ''"
+          :class="
+            item.isActive ? 'bg-accent font-medium text-accent-foreground' : ''
+          "
           :aria-current="item.isActive ? 'page' : undefined"
           @click="isMoreMenuOpen = false"
         >
-          <component :is="item.icon" class="size-5" />
+          <component
+            :is="item.icon"
+            class="size-5"
+          />
           <span>{{ item.title }}</span>
         </Link>
       </div>

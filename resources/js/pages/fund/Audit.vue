@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import FundPagination from '@/components/FundPagination.vue';
+import AppPageHeader from '@/components/AppPageHeader.vue';
 import {
   fundDateTime,
   usd,
@@ -42,18 +43,17 @@ defineOptions({
   <main class="mx-auto flex w-full max-w-6xl flex-col gap-6 p-4 md:p-8">
     <Head title="Trazabilidad del fondo" />
     <header class="flex flex-wrap items-center justify-between gap-4">
-      <div>
-        <p class="text-sm text-muted-foreground">Auditoría · Solo consulta</p>
-        <h1 class="text-3xl font-semibold tracking-tight">Trazabilidad</h1>
-        <p class="mt-1 text-muted-foreground">
-          Quién realizó cada operación, cuándo y qué registros la respaldan.
-        </p>
-      </div>
-      <Button
-        as-child
-        variant="outline"
-        ><Link :href="controls()">Revisar controles</Link></Button
-      >
+      <AppPageHeader title="Trazabilidad">
+        <template #actions>
+          <Button
+            class="hidden sm:inline-flex"
+            as-child
+            variant="outline"
+          >
+            <Link :href="controls()">Revisar controles</Link>
+          </Button>
+        </template>
+      </AppPageHeader>
     </header>
     <form
       class="flex flex-wrap items-end gap-3"

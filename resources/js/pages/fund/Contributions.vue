@@ -7,6 +7,7 @@ import {
   ChevronRight,
   CircleCheck,
   Clock3,
+  Plus,
 } from '@lucide/vue';
 import { dashboard } from '@/routes';
 import { index as contributionsIndex } from '@/routes/fund/contributions';
@@ -14,15 +15,9 @@ import {
   create as newTransaction,
   show as transactionShow,
 } from '@/routes/fund/transactions';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import FundStatus from '@/components/FundStatus.vue';
+import AppPageHeader from '@/components/AppPageHeader.vue';
 import { fundMonth, usd } from '@/lib/fund';
 
 type Period = {
@@ -64,6 +59,8 @@ function changeYear(event: Event): void {
 
 defineOptions({
   layout: {
+    showHeader: true,
+    showMobileHeader: false,
     breadcrumbs: [
       { title: 'Inicio', href: dashboard() },
       { title: 'Aportes', href: contributionsIndex() },
@@ -75,87 +72,88 @@ defineOptions({
 <template>
   <main class="mx-auto flex w-full max-w-5xl flex-col gap-6 p-4 md:p-8">
     <Head title="Mis aportes" />
-    <header class="flex flex-wrap items-center justify-between gap-4">
-      <div>
-        <p class="text-sm text-muted-foreground">
-          Mi participación en el fondo
-        </p>
-        <h1 class="text-3xl font-semibold tracking-tight">Aportes</h1>
-        <p class="mt-1 text-muted-foreground">
-          Los meses cuentan como pagados cuando se aprueba el comprobante.
-        </p>
-      </div>
-      <Button as-child>
-        <Link :href="newTransaction()">Registrar aporte</Link>
-      </Button>
-    </header>
-
-    <div class="grid gap-4 sm:grid-cols-2">
-      <Card>
-        <CardHeader>
-          <CardTitle>Total aportado</CardTitle>
-          <CardDescription>Cuotas aprobadas en todos los años</CardDescription>
-        </CardHeader>
-        <CardContent class="text-3xl font-semibold tabular-nums">
-          {{ usd(totalCents) }}
-        </CardContent>
-      </Card>
-      <Card>
-        <CardHeader>
-          <CardTitle>Estado de revisión</CardTitle>
-          <CardDescription>Un aporte a la vez</CardDescription>
-        </CardHeader>
-        <CardContent>
+    <section
+      class="space-y-4"
+      aria-label="Resumen de aportes"
+    >
+      <AppPageHeader title="Mis aportes">
+        <template #actions>
+          <Button
+            class="hidden h-11 shrink-0 px-3 sm:inline-flex sm:px-4"
+            size="sm"
+            as-child
+          >
+            <Link :href="newTransaction()">Registrar aporte</Link>
+          </Button>
+        </template>
+      </AppPageHeader>
+      <div class="grid grid-cols-2 gap-3 rounded-lg border p-3 sm:gap-4 sm:p-4">
+        <div class="min-w-0">
+          <p class="text-xs text-muted-foreground sm:text-sm">Total aportado</p>
+          <p
+            class="mt-1 truncate text-xl font-semibold tabular-nums sm:text-2xl"
+          >
+            {{ usd(totalCents) }}
+          </p>
+          <p class="text-xs text-muted-foreground">En todos los años</p>
+        </div>
+        <div class="min-w-0 border-s ps-3 sm:ps-4">
+          <p class="text-xs text-muted-foreground sm:text-sm">Estado</p>
           <Link
             v-if="pendingTransactionId"
-            class="font-medium underline underline-offset-4"
+            class="mt-1 block truncate text-sm font-medium underline underline-offset-4"
             :href="transactionShow(pendingTransactionId)"
           >
-            Comprobante #{{ pendingTransactionId }} en revisión
+            Comprobante #{{ pendingTransactionId }} pendiente
           </Link>
           <p
             v-else
-            class="text-sm text-muted-foreground"
+            class="mt-1 text-sm font-medium"
           >
-            No tienes aportes esperando aprobación.
+            Al día
           </p>
-        </CardContent>
-      </Card>
-    </div>
+          <p class="text-xs text-muted-foreground">
+            {{
+              pendingTransactionId
+                ? 'Esperando aprobación'
+                : 'Sin aportes pendientes'
+            }}
+          </p>
+        </div>
+      </div>
+    </section>
 
     <section
       aria-labelledby="calendar-heading"
-      class="flex flex-col gap-4"
+      class="flex flex-col gap-3 sm:gap-4"
     >
-      <div class="flex flex-wrap items-end justify-between gap-4">
-        <div>
+      <div
+        class="sticky top-12 z-10 -mx-3 flex items-center justify-between gap-3 border-b bg-background/95 px-3 py-2 backdrop-blur sm:static sm:mx-0 sm:border-0 sm:bg-transparent sm:p-0 sm:backdrop-blur-none"
+      >
+        <div class="flex min-w-0 items-center gap-2">
           <h2
             id="calendar-heading"
-            class="text-xl font-semibold"
+            class="truncate text-base font-semibold sm:text-xl"
           >
-            Aportes de {{ year }}
+            {{ year }}
           </h2>
-          <p class="text-sm text-muted-foreground">
-            {{ paidCount }} de {{ configuredCount }} cuotas configuradas pagadas
-            · {{ usd(yearTotalCents) }} aprobados este año.
-          </p>
+          <span class="shrink-0 text-xs text-muted-foreground sm:hidden">
+            {{ paidCount }}/{{ configuredCount }} pagadas
+          </span>
         </div>
         <nav
-          class="flex flex-wrap items-center gap-2"
+          class="flex shrink-0 items-center gap-1"
           aria-label="Elegir año de aportes"
         >
           <Button
             v-if="years.includes(year - 1)"
-            variant="outline"
+            variant="ghost"
             size="icon"
+            class="size-9"
             as-child
           >
             <Link
-              :href="
-                contributionsIndex({
-                  query: { year: year - 1 },
-                })
-              "
+              :href="contributionsIndex({ query: { year: year - 1 } })"
               :aria-label="`Ver aportes de ${year - 1}`"
               ><ChevronLeft aria-hidden="true"
             /></Link>
@@ -168,7 +166,7 @@ defineOptions({
           <select
             id="contribution-year"
             :value="year"
-            class="h-9 rounded-md border bg-background px-3 text-sm"
+            class="h-9 rounded-md border bg-background px-2 text-sm"
             @change="changeYear"
           >
             <option
@@ -181,21 +179,31 @@ defineOptions({
           </select>
           <Button
             v-if="years.includes(year + 1)"
-            variant="outline"
+            variant="ghost"
             size="icon"
+            class="size-9"
             as-child
           >
             <Link
-              :href="
-                contributionsIndex({
-                  query: { year: year + 1 },
-                })
-              "
+              :href="contributionsIndex({ query: { year: year + 1 } })"
               :aria-label="`Ver aportes de ${year + 1}`"
               ><ChevronRight aria-hidden="true"
             /></Link>
           </Button>
         </nav>
+      </div>
+      <div
+        class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between"
+      >
+        <div class="min-w-0">
+          <h3 class="text-lg font-semibold sm:text-xl">
+            Aportes de {{ year }}
+          </h3>
+          <p class="hidden text-sm text-muted-foreground sm:block">
+            {{ paidCount }} de {{ configuredCount }} cuotas configuradas pagadas
+            · {{ usd(yearTotalCents) }} aprobados este año.
+          </p>
+        </div>
       </div>
       <p
         v-if="!hasConfiguredPeriods"
@@ -212,12 +220,17 @@ defineOptions({
       </p>
       <ol
         v-else
-        class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4"
+        class="grid grid-cols-1 gap-2 sm:grid-cols-2 sm:gap-3 lg:grid-cols-4"
       >
         <li
           v-for="period in displayedPeriods"
           :key="period.month"
-          class="flex min-h-36 items-start gap-3 rounded-lg border p-4"
+          class="flex items-center gap-3 rounded-lg border px-3 py-3 sm:items-start sm:p-4"
+          :class="
+            period.status === 'paid'
+              ? 'border-primary/20 bg-primary/[0.035]'
+              : ''
+          "
         >
           <component
             :is="
@@ -227,7 +240,12 @@ defineOptions({
                   ? Clock3
                   : CalendarDays
             "
-            class="mt-0.5 size-5 shrink-0 text-muted-foreground"
+            class="mt-0.5 size-5 shrink-0"
+            :class="
+              period.status === 'paid'
+                ? 'text-primary'
+                : 'text-muted-foreground'
+            "
             aria-hidden="true"
           />
           <div class="min-w-0 flex-1">
@@ -239,7 +257,7 @@ defineOptions({
             </p>
             <FundStatus
               :status="period.status"
-              class="mt-2"
+              class="mt-1.5"
             />
             <p
               v-if="period.transaction_id"
@@ -255,5 +273,17 @@ defineOptions({
         </li>
       </ol>
     </section>
+    <Button
+      class="fixed right-4 bottom-[calc(5rem+env(safe-area-inset-bottom))] z-30 size-14 rounded-full shadow-lg sm:hidden"
+      size="icon"
+      as-child
+    >
+      <Link
+        :href="newTransaction()"
+        aria-label="Registrar aporte"
+      >
+        <Plus class="size-6" />
+      </Link>
+    </Button>
   </main>
 </template>

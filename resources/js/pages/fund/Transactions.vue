@@ -15,6 +15,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import FundPagination from '@/components/FundPagination.vue';
 import FundStatus from '@/components/FundStatus.vue';
+import AppPageHeader from '@/components/AppPageHeader.vue';
 import {
   fundDate,
   fundDateTime,
@@ -105,41 +106,26 @@ onBeforeUnmount(() => clearTimeout(searchTimeout));
       v-if="!reconciliation"
       class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4"
     >
-      <div>
-        <p class="text-sm text-muted-foreground">
-          {{ reconciliation ? 'Tesorería' : 'Mi cuenta' }}
-        </p>
-        <h1 class="text-2xl font-semibold tracking-tight sm:text-3xl">{{ title }}</h1>
-        <p class="mt-1 text-sm text-muted-foreground sm:text-base">
-          {{
-            reconciliation
-              ? 'Revisa comprobantes y consulta las decisiones de todo el fondo.'
-              : 'Tus aportes y cuotas de préstamo, desde el registro hasta su aprobación.'
-          }}
-        </p>
-      </div>
-      <Button
-        v-if="!reconciliation"
-        as-child
-        ><Link :href="newTransaction()">Registrar transferencia</Link></Button
-      >
+      <AppPageHeader :title="title">
+        <template #actions>
+          <Button
+            class="hidden sm:inline-flex"
+            as-child
+          >
+            <Link :href="newTransaction()">Registrar transferencia</Link>
+          </Button>
+        </template>
+      </AppPageHeader>
     </header>
 
     <section
       v-if="reconciliation"
-      class="-mx-4 -mt-4 bg-gradient-to-b from-primary/90 via-primary to-primary/75 px-4 pb-7 pt-5 text-primary-foreground md:-mx-8 md:-mt-8 md:px-8"
       aria-labelledby="reconciliation-title"
     >
-      <h1 id="reconciliation-title" class="text-center text-lg font-semibold">
-        Conciliación
-      </h1>
-      <p class="mt-5 text-center text-sm text-white/75">
-        Transferencias del fondo
-      </p>
-      <p class="mt-1 text-center text-3xl font-semibold tracking-tight">
-        {{ transactions.total }}
-        <span class="text-lg font-medium">{{ transactions.total === 1 ? 'registro' : 'registros' }}</span>
-      </p>
+      <AppPageHeader
+        id="reconciliation-title"
+        title="Conciliación"
+      />
     </section>
 
     <form
@@ -149,11 +135,12 @@ onBeforeUnmount(() => clearTimeout(searchTimeout));
       @submit.prevent="filter"
     >
       <div class="flex min-w-0 flex-col gap-2 sm:min-w-48 sm:flex-1">
-        <Label for="transaction-search"
-          >Buscar comprobante o banco<span v-if="reconciliation"
+        <Label for="transaction-search">
+          Buscar comprobante o banco<span v-if="reconciliation"
             >, o participante</span
-          ></Label
-        ><Input
+          >
+        </Label>
+        <Input
           id="transaction-search"
           v-model="search"
           maxlength="100"
@@ -204,7 +191,7 @@ onBeforeUnmount(() => clearTimeout(searchTimeout));
 
     <form
       v-if="reconciliation"
-      class="relative z-10 -mt-11 flex items-center gap-2 rounded-full border bg-background px-3 py-1.5 shadow-md"
+      class="relative z-10 flex items-center gap-2 rounded-full border bg-background px-3 py-1.5 shadow-md"
       role="search"
       @submit.prevent="filter"
     >
@@ -220,7 +207,7 @@ onBeforeUnmount(() => clearTimeout(searchTimeout));
       <select
         id="type-filter"
         v-model="type"
-        class="h-9 max-w-32 shrink-0 rounded-full border-0 bg-transparent px-2 text-xs text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        class="h-9 max-w-32 shrink-0 rounded-full border-0 bg-transparent px-2 text-xs text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
         aria-label="Filtrar por destino"
         @change="filter"
       >
@@ -245,7 +232,11 @@ onBeforeUnmount(() => clearTimeout(searchTimeout));
         :key="option.value || 'all'"
         :href="listingRoute({ query: { status: option.value, type, search } })"
         class="shrink-0 rounded-full border px-3 py-1.5 text-sm"
-        :class="status === option.value ? 'border-primary bg-primary text-primary-foreground' : 'bg-background text-muted-foreground'"
+        :class="
+          status === option.value
+            ? 'border-primary bg-primary text-primary-foreground'
+            : 'bg-background text-muted-foreground'
+        "
       >
         {{ option.label }}
       </Link>
@@ -255,7 +246,10 @@ onBeforeUnmount(() => clearTimeout(searchTimeout));
       aria-label="Historial de transacciones"
       class="flex flex-col gap-4"
     >
-      <p v-if="!reconciliation" class="text-sm text-muted-foreground">
+      <p
+        v-if="!reconciliation"
+        class="text-sm text-muted-foreground"
+      >
         {{ transactions.total }}
         {{ transactions.total === 1 ? 'transacción' : 'transacciones' }}
         {{ hasFilters ? 'con estos filtros' : 'registradas' }}. Los registros en
@@ -380,7 +374,7 @@ onBeforeUnmount(() => clearTimeout(searchTimeout));
             v-for="item in transactions.data"
             :key="item.id"
             :href="transactionShow(item.id, { query: { return_to: page.url } })"
-            class="flex flex-col gap-2.5 px-3 py-3 transition-colors hover:bg-muted/30 focus-visible:bg-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+            class="flex flex-col gap-2.5 px-3 py-3 transition-colors hover:bg-muted/30 focus-visible:bg-muted/30 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none focus-visible:ring-inset"
             :aria-label="`Ver transacción ${item.reference} de ${item.user.name}, ${usd(item.amount_cents)}, ${item.status}`"
           >
             <div class="flex items-start justify-between gap-3">
@@ -389,11 +383,19 @@ onBeforeUnmount(() => clearTimeout(searchTimeout));
                   class="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary"
                   aria-hidden="true"
                 >
-                  <ArrowDownLeft v-if="item.status === 'pending'" class="size-4" />
-                  <ArrowUpRight v-else class="size-4" />
+                  <ArrowDownLeft
+                    v-if="item.status === 'pending'"
+                    class="size-4"
+                  />
+                  <ArrowUpRight
+                    v-else
+                    class="size-4"
+                  />
                 </span>
                 <div class="min-w-0">
-                  <p class="truncate text-sm font-semibold">{{ item.user.name }}</p>
+                  <p class="truncate text-sm font-semibold">
+                    {{ item.user.name }}
+                  </p>
                   <p class="truncate text-xs text-muted-foreground">
                     {{ item.bank_name }} · {{ item.reference }}
                   </p>
@@ -401,7 +403,11 @@ onBeforeUnmount(() => clearTimeout(searchTimeout));
               </div>
               <p
                 class="shrink-0 text-right text-sm font-semibold tabular-nums"
-                :class="item.status === 'rejected' ? 'text-destructive' : 'text-primary'"
+                :class="
+                  item.status === 'rejected'
+                    ? 'text-destructive'
+                    : 'text-primary'
+                "
               >
                 {{ usd(item.amount_cents) }}
               </p>
@@ -413,7 +419,10 @@ onBeforeUnmount(() => clearTimeout(searchTimeout));
                   · {{ fundDateTime(item.approved_at) }}
                 </template>
               </p>
-              <FundStatus :status="item.status" subtle />
+              <FundStatus
+                :status="item.status"
+                subtle
+              />
             </div>
           </Link>
         </div>
@@ -427,28 +436,52 @@ onBeforeUnmount(() => clearTimeout(searchTimeout));
             </caption>
             <thead class="bg-muted/70 text-muted-foreground">
               <tr>
-                <th scope="col" class="px-4 py-3 font-medium">
+                <th
+                  scope="col"
+                  class="px-4 py-3 font-medium"
+                >
                   Fecha
                 </th>
-                <th scope="col" class="px-4 py-3 font-medium">
+                <th
+                  scope="col"
+                  class="px-4 py-3 font-medium"
+                >
                   Participante
                 </th>
-                <th scope="col" class="px-4 py-3 font-medium">
+                <th
+                  scope="col"
+                  class="px-4 py-3 font-medium"
+                >
                   Comprobante
                 </th>
-                <th scope="col" class="px-4 py-3 font-medium">
+                <th
+                  scope="col"
+                  class="px-4 py-3 font-medium"
+                >
                   Destino
                 </th>
-                <th scope="col" class="px-4 py-3 text-right font-medium">
+                <th
+                  scope="col"
+                  class="px-4 py-3 text-right font-medium"
+                >
                   Monto
                 </th>
-                <th scope="col" class="px-4 py-3 font-medium">
+                <th
+                  scope="col"
+                  class="px-4 py-3 font-medium"
+                >
                   Estado
                 </th>
-                <th scope="col" class="px-4 py-3 font-medium">
+                <th
+                  scope="col"
+                  class="px-4 py-3 font-medium"
+                >
                   Autorización
                 </th>
-                <th scope="col" class="px-4 py-3 text-right font-medium">
+                <th
+                  scope="col"
+                  class="px-4 py-3 text-right font-medium"
+                >
                   Detalle
                 </th>
               </tr>
@@ -494,7 +527,11 @@ onBeforeUnmount(() => clearTimeout(searchTimeout));
                 </td>
                 <td class="px-4 py-3 text-right">
                   <Link
-                    :href="transactionShow(item.id, { query: { return_to: page.url } })"
+                    :href="
+                      transactionShow(item.id, {
+                        query: { return_to: page.url },
+                      })
+                    "
                     :aria-label="`Ver comprobante ${item.reference}`"
                     class="font-medium underline underline-offset-4 focus-visible:ring-2 focus-visible:ring-ring"
                     >Abrir</Link

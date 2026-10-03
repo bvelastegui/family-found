@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import { Head, Link, useForm, setLayoutProps } from '@inertiajs/vue3';
-import { ArrowLeft, Check, Download, X } from '@lucide/vue';
+import { ArrowLeft, Check, Download, EllipsisVertical, X } from '@lucide/vue';
 import { useSidebar } from '@/components/ui/sidebar/utils';
 import { dashboard } from '@/routes';
 import {
@@ -15,6 +15,12 @@ import {
   preview as evidencePreview,
 } from '@/routes/fund/evidences';
 import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import AutoResizeTextarea from '@/components/AutoResizeTextarea.vue';
 import { Label } from '@/components/ui/label';
 import {
@@ -81,6 +87,7 @@ const returnQuery = computed(() =>
   props.returnTo ? { return_to: props.returnTo } : {},
 );
 setLayoutProps({
+  showHeader: false,
   breadcrumbs: [
     { title: 'Inicio', href: dashboard() },
     {
@@ -99,9 +106,6 @@ const isPreviewable = computed(() =>
 );
 const evidencePreviewUrl = computed(
   () => evidencePreview(props.evidence.id).url,
-);
-const approvalEvent = computed(() =>
-  props.events.find((event) => event.event === 'transaction.approved'),
 );
 
 function eventTitle(event: Event): string {
@@ -142,12 +146,23 @@ function reason(event: Event): string | null {
 </script>
 
 <template>
-  <main class="mx-auto flex w-full max-w-4xl flex-col gap-4 p-3 pb-24 sm:gap-6 sm:p-4 sm:pb-8 md:p-8">
+  <main
+    class="mx-auto flex w-full max-w-4xl flex-col gap-4 p-3 sm:gap-6 sm:p-4 md:p-8"
+  >
     <Head :title="`Transferencia #${transaction.id}`" />
-    <p class="sr-only" aria-live="polite">
-      {{ isTreasurer && transaction.status === 'pending' ? 'Acciones disponibles: volver, aprobar o rechazar.' : `Estado: ${transaction.status}` }}
+    <p
+      class="sr-only"
+      aria-live="polite"
+    >
+      {{
+        isTreasurer && transaction.status === 'pending'
+          ? 'Acciones disponibles: volver, aprobar o rechazar.'
+          : `Estado: ${transaction.status}`
+      }}
     </p>
-    <header class="sticky top-0 z-20 -mx-3 flex items-center gap-1 border-b bg-background/95 px-2 py-2 backdrop-blur sm:static sm:mx-0 sm:gap-2 sm:border-0 sm:bg-transparent sm:p-0 sm:backdrop-blur-none">
+    <header
+      class="sticky top-0 z-20 -mx-3 -mt-3 flex items-center gap-1 border-b bg-background px-2 py-2 sm:-mx-4 sm:-mt-4 md:-mx-8 md:-mt-8"
+    >
       <Link
         :href="returnTo ?? transactionsIndex().url"
         aria-label="Volver"
@@ -157,21 +172,20 @@ function reason(event: Event): string | null {
         <ArrowLeft class="size-5" />
       </Link>
       <div class="min-w-0 flex-1">
-        <h1 class="truncate text-base font-semibold sm:text-2xl">
-          Comprobante #{{ transaction.id }}
+        <h1 class="text-sm font-semibold sm:text-lg">
+          Comprobante #{{ transaction.id }} |
+          {{ usd(transaction.amount_cents) }}
         </h1>
-        <p class="truncate text-xs text-muted-foreground sm:text-sm">
-          {{ fundDate(transaction.transaction_date) }} · {{ usd(transaction.amount_cents) }}
-        </p>
       </div>
-      <FundStatus :status="transaction.status" />
       <div
         v-if="isTreasurer && transaction.status === 'pending'"
-        class="hidden items-center gap-2 sm:flex"
+        class="flex shrink-0 items-center gap-1"
       >
         <form
           class="shrink-0"
-          @submit.prevent="approval.post(approve(transaction.id, { query: returnQuery }).url)"
+          @submit.prevent="
+            approval.post(approve(transaction.id, { query: returnQuery }).url)
+          "
         >
           <Button
             type="submit"
@@ -198,65 +212,79 @@ function reason(event: Event): string | null {
           <X class="size-5" />
         </Button>
       </div>
+      <DropdownMenu>
+        <DropdownMenuTrigger as-child>
+          <Button
+            variant="ghost"
+            size="icon"
+            class="size-10 shrink-0"
+            aria-label="Más acciones"
+          >
+            <EllipsisVertical class="size-5" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          <DropdownMenuItem as-child>
+            <a :href="evidenceShow(transaction.evidence_id).url">
+              <Download class="size-4" />
+              Descargar comprobante
+            </a>
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
     </header>
     <p
       v-if="approval.hasErrors"
       role="alert"
       class="rounded-md border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive"
     >
-      La aprobación no se completó. Comprueba que las asignaciones sigan siendo válidas.
+      La aprobación no se completó. Comprueba que las asignaciones sigan siendo
+      válidas.
     </p>
-    <p class="hidden text-sm text-muted-foreground sm:block">
-      Transferencia del {{ fundDate(transaction.transaction_date) }} · Registrada en el sistema el
-      {{ fundDateTime(transaction.created_at) }}
-      <span v-if="approvalEvent" class="font-medium text-foreground">
-        · Autorizada por {{ approvalEvent.actor_name }} el {{ fundDateTime(approvalEvent.created_at) }}
-      </span>
-    </p>
-    <section aria-labelledby="evidence-title" class="space-y-2">
-      <header class="flex items-baseline justify-between gap-2">
-        <h2 id="evidence-title" class="text-base font-semibold">Comprobante</h2>
-        <p class="truncate text-xs text-muted-foreground">{{ evidence.original_name }}</p>
-      </header>
+    <section
+      aria-label="Evidencia de la transferencia"
+      class="space-y-2"
+    >
       <p class="text-sm text-muted-foreground">
-        Comprueba que el valor indicado en la evidencia coincida con la transferencia registrada:
-        <strong class="whitespace-nowrap text-foreground">{{ usd(transaction.amount_cents) }}</strong>.
+        Comprueba que el valor indicado en la evidencia coincida con la
+        transferencia registrada:
+        <strong class="whitespace-nowrap text-foreground">{{
+          usd(transaction.amount_cents)
+        }}</strong
+        >.
       </p>
-        <div
-          v-if="isPreviewable"
-          class="overflow-auto rounded-md border bg-muted/30"
-        >
-          <img
-            v-if="evidence.mime.startsWith('image/')"
-            :src="evidencePreviewUrl"
-            :alt="`Vista previa del comprobante ${evidence.original_name}`"
-            class="mx-auto block h-auto max-h-[78vh] w-auto max-w-full object-contain"
-            loading="eager"
-            fetchpriority="high"
-          />
-          <iframe
-            v-else
-            :src="evidencePreviewUrl"
-            :title="`Vista previa del comprobante ${evidence.original_name}`"
-            class="h-[78vh] min-h-[32rem] w-full"
-          />
-        </div>
-        <p v-else class="rounded-md border px-3 py-2 text-sm text-muted-foreground">
-          Este tipo de archivo no admite vista previa.
-        </p>
-        <div class="flex flex-wrap gap-2">
-          <Button variant="outline" size="sm" as-child>
-            <a :href="evidenceShow(transaction.evidence_id).url">
-              <Download class="size-4" />
-              Descargar comprobante
-            </a>
-          </Button>
-        </div>
+      <div
+        v-if="isPreviewable"
+        class="overflow-auto rounded-md border bg-muted/30"
+      >
+        <img
+          v-if="evidence.mime.startsWith('image/')"
+          :src="evidencePreviewUrl"
+          :alt="`Evidencia de la transferencia #${transaction.id}`"
+          class="mx-auto block h-auto max-h-[78vh] w-auto max-w-full object-contain"
+          loading="eager"
+          fetchpriority="high"
+        />
+        <iframe
+          v-else
+          :src="evidencePreviewUrl"
+          :title="`Evidencia de la transferencia #${transaction.id}`"
+          class="h-[78vh] min-h-[32rem] w-full"
+        />
+      </div>
+      <p
+        v-else
+        class="rounded-md border px-3 py-2 text-sm text-muted-foreground"
+      >
+        Este tipo de archivo no admite vista previa.
+      </p>
     </section>
     <section class="space-y-2 border-t pt-3">
       <div>
-        <h2 class="text-base font-semibold">Información bancaria</h2>
-        <p class="text-xs text-muted-foreground">Solo se contabiliza al aprobar la transferencia.</p>
+        <h2 class="text-base font-semibold">Detalles de la transacción</h2>
+        <p class="text-xs text-muted-foreground">
+          Solo se contabiliza al aprobar la transferencia.
+        </p>
       </div>
       <div class="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
         <div class="min-w-0">
@@ -275,36 +303,48 @@ function reason(event: Event): string | null {
         </div>
         <div>
           <p class="text-muted-foreground">Fecha del movimiento</p>
-          <p class="font-medium">{{ fundDate(transaction.transaction_date) }}</p>
+          <p class="font-medium">
+            {{ fundDate(transaction.transaction_date) }}
+          </p>
+        </div>
+        <div>
+          <p class="text-muted-foreground">Fecha de registro</p>
+          <p class="font-medium">{{ fundDateTime(transaction.created_at) }}</p>
+        </div>
+        <div>
+          <p class="mb-1 text-muted-foreground">Estado</p>
+          <FundStatus :status="transaction.status" />
         </div>
       </div>
     </section>
     <section class="space-y-2 border-t pt-3">
       <h2 class="text-base font-semibold">Asignación del pago</h2>
-      <ul class="divide-y">
-          <li
-            v-for="allocation in allocations"
-            :key="allocation.id"
-            class="flex flex-wrap justify-between gap-2 py-2"
-          >
-            <div>
-              <p class="font-medium">
-                {{
-                  allocation.contribution_period_id
-                    ? `Aporte de ${allocation.month ? fundMonth(allocation.month.slice(0, 7)) : ''}`
-                    : `Préstamo #${allocation.loan_id}, cuota ${allocation.installment_number}`
-                }}
-              </p>
-              <p
-                v-if="allocation.loan_installment_id"
-                class="text-sm text-muted-foreground"
-              >
-                Capital {{ usd(allocation.capital_cents) }} · Interés
-                {{ usd(allocation.interest_cents) }}
-              </p>
-            </div>
-            <strong>{{ usd(allocation.amount_cents) }}</strong>
-          </li>
+      <ul class="grid gap-3 text-sm sm:grid-cols-2">
+        <li
+          v-for="allocation in allocations"
+          :key="allocation.id"
+          class="flex min-w-0 items-start justify-between gap-3"
+        >
+          <div>
+            <p class="text-muted-foreground">
+              {{
+                allocation.contribution_period_id
+                  ? `Aporte de ${allocation.month ? fundMonth(allocation.month.slice(0, 7)) : ''}`
+                  : `Préstamo #${allocation.loan_id}, cuota ${allocation.installment_number}`
+              }}
+            </p>
+            <p
+              v-if="allocation.loan_installment_id"
+              class="text-sm text-muted-foreground"
+            >
+              Capital {{ usd(allocation.capital_cents) }} · Interés
+              {{ usd(allocation.interest_cents) }}
+            </p>
+          </div>
+          <span class="shrink-0 font-medium tabular-nums">{{
+            usd(allocation.amount_cents)
+          }}</span>
+        </li>
       </ul>
     </section>
     <Dialog v-model:open="showingRejection">
@@ -312,7 +352,8 @@ function reason(event: Event): string | null {
         <DialogHeader>
           <DialogTitle>Rechazar comprobante</DialogTitle>
           <DialogDescription>
-            Indica el motivo del rechazo. No se registrará ningún movimiento en el fondo.
+            Indica el motivo del rechazo. No se registrará ningún movimiento en
+            el fondo.
           </DialogDescription>
         </DialogHeader>
         <form
@@ -379,11 +420,12 @@ function reason(event: Event): string | null {
         !transaction.superseded_by_id
       "
       class="space-y-2 border-t py-3"
-      >
+    >
       <div>
         <h2 class="font-semibold">¿Necesitas corregir el registro?</h2>
         <p class="text-xs text-muted-foreground">
-          La corrección conserva el comprobante original y contabiliza la reversión y el reemplazo juntos.
+          La corrección conserva el comprobante original y contabiliza la
+          reversión y el reemplazo juntos.
         </p>
       </div>
       <div>
@@ -395,83 +437,60 @@ function reason(event: Event): string | null {
         </Button>
       </div>
     </section>
-    <section class="space-y-2 border-t pt-3">
+    <section class="space-y-5 border-t pt-3">
       <div>
         <h2 class="text-base font-semibold">Historial de decisiones</h2>
         <p class="text-xs text-muted-foreground">
-          Quién intervino y qué sucedió con este comprobante. Horarios de Ecuador.
+          Quién intervino y qué sucedió con este comprobante. Horarios de
+          Ecuador.
         </p>
       </div>
       <ol
-          v-if="events.length"
-          class="text-sm"
-          aria-label="Decisiones sobre la transferencia"
+        v-if="events.length"
+        class="text-sm"
+        aria-label="Decisiones sobre la transferencia"
+      >
+        <li
+          v-for="event in events"
+          :key="event.id"
+          class="relative border-s-2 border-border ps-5 pb-6 last:border-transparent last:pb-0"
         >
-          <li
-            v-for="event in events"
-            :key="event.id"
-            class="relative border-s-2 border-border ps-5 pb-6 last:border-transparent last:pb-0"
+          <span
+            class="absolute -start-1.5 top-0.5 size-3 rounded-full border-2 border-primary bg-background"
+            aria-hidden="true"
+          />
+          <p class="font-semibold">{{ eventTitle(event) }}</p>
+          <p class="mt-1 text-muted-foreground">
+            {{ event.actor_name }} ·
+            <time :datetime="event.created_at.replace(' ', 'T') + 'Z'">{{
+              fundDateTime(event.created_at)
+            }}</time>
+          </p>
+          <p
+            v-if="eventDescription(event)"
+            class="mt-2 text-muted-foreground"
           >
-            <span
-              class="absolute -start-1.5 top-0.5 size-3 rounded-full border-2 border-primary bg-background"
-              aria-hidden="true"
-            />
-            <p class="font-semibold">{{ eventTitle(event) }}</p>
-            <p class="mt-1 text-muted-foreground">
-              {{ event.actor_name }} ·
-              <time :datetime="event.created_at.replace(' ', 'T') + 'Z'">{{
-                fundDateTime(event.created_at)
-              }}</time>
-            </p>
-            <p
-              v-if="eventDescription(event)"
-              class="mt-2 text-muted-foreground"
-            >
-              {{ eventDescription(event) }}
-            </p>
-            <p
-              v-if="reason(event)"
-              class="mt-2 rounded-md bg-muted px-3 py-2 break-words whitespace-pre-wrap"
-            >
-              Motivo: {{ reason(event) }}
-            </p>
-          </li>
+            {{ eventDescription(event) }}
+          </p>
+          <p
+            v-if="reason(event)"
+            class="mt-2 rounded-md bg-muted px-3 py-2 break-words whitespace-pre-wrap"
+          >
+            Motivo: {{ reason(event) }}
+          </p>
+        </li>
       </ol>
-        <p
-          v-else
-          class="text-muted-foreground"
-        >
-          Todavía no hay decisiones registradas.
-        </p>
+      <p
+        v-else
+        class="text-muted-foreground"
+      >
+        Todavía no hay decisiones registradas.
+      </p>
     </section>
     <Link
       :href="returnTo ?? transactionsIndex().url"
       class="hidden text-sm underline underline-offset-4 sm:inline"
       >{{ returnTo ? 'Volver al listado' : 'Volver a mis transacciones' }}</Link
     >
-    <div
-      v-if="isTreasurer && transaction.status === 'pending'"
-      class="fixed inset-x-0 bottom-0 z-30 flex gap-3 border-t bg-background/95 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur sm:hidden"
-    >
-      <Button
-        class="h-12 flex-1"
-        :disabled="approval.processing || rejection.processing"
-        @click="
-          approval.post(approve(transaction.id, { query: returnQuery }).url)
-        "
-      >
-        <Check class="size-4" />
-        Aprobar
-      </Button>
-      <Button
-        class="h-12 flex-1"
-        variant="destructive"
-        :disabled="approval.processing"
-        @click="showingRejection = true"
-      >
-        <X class="size-4" />
-        Rechazar
-      </Button>
-    </div>
   </main>
 </template>

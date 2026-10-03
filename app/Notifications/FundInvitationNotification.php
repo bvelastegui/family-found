@@ -13,7 +13,7 @@ class FundInvitationNotification extends Notification implements ShouldQueue
 
     public function __construct(public string $invitationUrl)
     {
-        $this->onConnection('redis');
+        //        $this->onConnection('redis');
     }
 
     /**

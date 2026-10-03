@@ -8,10 +8,14 @@ import type { BreadcrumbItem } from '@/types';
 
 type Props = {
   breadcrumbs?: BreadcrumbItem[];
+  showHeader?: boolean;
+  showMobileHeader?: boolean;
 };
 
 withDefaults(defineProps<Props>(), {
   breadcrumbs: () => [],
+  showHeader: true,
+  showMobileHeader: true,
 });
 </script>
 
@@ -22,7 +26,12 @@ withDefaults(defineProps<Props>(), {
       variant="sidebar"
       class="min-w-0 overflow-x-clip pb-16 md:pb-0"
     >
-      <AppSidebarHeader :breadcrumbs="breadcrumbs" />
+      <AppSidebarHeader
+        v-if="showHeader || showMobileHeader"
+        :breadcrumbs="breadcrumbs"
+        :show-desktop="showHeader"
+        :show-mobile="showMobileHeader"
+      />
       <slot />
     </AppContent>
     <Toaster />

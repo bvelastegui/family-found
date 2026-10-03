@@ -8,6 +8,7 @@ import {
   update as updateBank,
 } from '@/routes/fund/banks';
 import FundPagination from '@/components/FundPagination.vue';
+import AppPageHeader from '@/components/AppPageHeader.vue';
 import {
   Card,
   CardContent,
@@ -52,13 +53,7 @@ function toggleBank(item: Bank): void {
 <template>
   <main class="mx-auto flex w-full max-w-4xl flex-col gap-6 p-4 md:p-8">
     <Head title="Bancos" />
-    <header>
-      <p class="text-sm text-muted-foreground">Tesorería</p>
-      <h1 class="text-3xl font-semibold tracking-tight">Bancos</h1>
-      <p class="mt-1 text-muted-foreground">
-        Mantén un catálogo único para identificar comprobantes duplicados.
-      </p>
-    </header>
+    <AppPageHeader title="Bancos" />
     <Card
       ><CardHeader
         ><CardTitle>Agregar banco</CardTitle
