@@ -537,23 +537,38 @@ function next(): void {
         <div class="grid gap-2">
           <Label for="date">Fecha de transferencia</Label>
           <div class="flex min-w-0 items-center gap-2">
-          <input
-            id="date"
-            ref="dateInput"
-            v-model="form.transaction_date"
-            :type="enteringDateManually ? 'text' : 'date'"
-            :placeholder="enteringDateManually ? 'AAAA-MM-DD' : undefined"
-            required
-            class="h-12 min-w-0 flex-1 rounded-md border border-input bg-background px-3 text-base focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            :aria-invalid="!!form.errors.transaction_date"
-            :aria-describedby="
-              form.errors.transaction_date ? 'date-error' : undefined
-            "
-          />
-          <Button v-if="!enteringDateManually" type="button" variant="outline" class="h-12" @click="openDatePicker">Cambiar</Button>
+            <input
+              id="date"
+              ref="dateInput"
+              v-model="form.transaction_date"
+              :type="enteringDateManually ? 'text' : 'date'"
+              :placeholder="enteringDateManually ? 'AAAA-MM-DD' : undefined"
+              required
+              class="h-12 min-w-0 flex-1 rounded-md border border-input bg-background px-3 text-base focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+              :aria-invalid="!!form.errors.transaction_date"
+              :aria-describedby="
+                form.errors.transaction_date ? 'date-error' : undefined
+              "
+            />
+            <Button
+              v-if="!enteringDateManually"
+              type="button"
+              variant="outline"
+              class="h-12"
+              @click="openDatePicker"
+              >Cambiar</Button
+            >
           </div>
-          <button type="button" class="min-h-11 justify-self-start text-sm text-muted-foreground underline underline-offset-4" @click="enteringDateManually = !enteringDateManually">
-            {{ enteringDateManually ? 'Usar calendario' : 'Escribir fecha manualmente' }}
+          <button
+            type="button"
+            class="min-h-11 justify-self-start text-sm text-muted-foreground underline underline-offset-4"
+            @click="enteringDateManually = !enteringDateManually"
+          >
+            {{
+              enteringDateManually
+                ? 'Usar calendario'
+                : 'Escribir fecha manualmente'
+            }}
           </button>
           <p
             v-if="form.errors.transaction_date"

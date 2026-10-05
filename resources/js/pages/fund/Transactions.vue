@@ -155,7 +155,7 @@ onBeforeUnmount(() => clearTimeout(searchTimeout));
     </div>
 
     <nav
-      class="-mt-2 flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+      class="-mt-2 flex [scrollbar-width:none] gap-2 overflow-x-auto pb-1 [&::-webkit-scrollbar]:hidden"
       aria-label="Filtrar por estado"
     >
       <Link

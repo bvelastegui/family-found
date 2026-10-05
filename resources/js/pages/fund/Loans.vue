@@ -50,15 +50,29 @@ defineOptions({
         </Button>
       </template>
     </AppPageHeader>
-    <nav class="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" aria-label="Filtrar préstamos por estado">
+    <nav
+      class="flex [scrollbar-width:none] gap-2 overflow-x-auto pb-1 [&::-webkit-scrollbar]:hidden"
+      aria-label="Filtrar préstamos por estado"
+    >
       <Link
-        v-for="option in [{ label: 'Todos', value: '' }, { label: 'Reservados', value: 'reserved' }, { label: 'Desembolsados', value: 'disbursed' }, { label: 'Cancelados', value: 'cancelled' }, { label: 'Sustituidos', value: 'superseded' }]"
+        v-for="option in [
+          { label: 'Todos', value: '' },
+          { label: 'Reservados', value: 'reserved' },
+          { label: 'Desembolsados', value: 'disbursed' },
+          { label: 'Cancelados', value: 'cancelled' },
+          { label: 'Sustituidos', value: 'superseded' },
+        ]"
         :key="option.value"
         :href="loansIndex({ query: { status: option.value } })"
         class="inline-flex min-h-11 shrink-0 items-center rounded-full border px-3 text-sm focus-visible:ring-2 focus-visible:ring-ring"
-        :class="filters.status === option.value ? 'border-primary bg-primary text-primary-foreground' : 'bg-background text-muted-foreground'"
+        :class="
+          filters.status === option.value
+            ? 'border-primary bg-primary text-primary-foreground'
+            : 'bg-background text-muted-foreground'
+        "
         :aria-current="filters.status === option.value ? 'true' : undefined"
-      >{{ option.label }}</Link>
+        >{{ option.label }}</Link
+      >
     </nav>
     <section
       v-if="reservedLoans && filters.status === 'reserved'"
@@ -225,11 +239,19 @@ defineOptions({
               </div>
               <p class="flex items-center justify-between gap-3 text-sm">
                 <span class="text-muted-foreground">Saldo pendiente</span>
-                <span class="font-semibold text-primary tabular-nums">{{ usd(loan.outstanding_cents) }}</span>
+                <span class="font-semibold text-primary tabular-nums">{{
+                  usd(loan.outstanding_cents)
+                }}</span>
               </p>
-              <p v-if="loan.has_overdue_payment" class="text-xs font-medium text-destructive">Pago atrasado</p>
+              <p
+                v-if="loan.has_overdue_payment"
+                class="text-xs font-medium text-destructive"
+              >
+                Pago atrasado
+              </p>
               <p class="text-xs text-muted-foreground">
-                {{ loan.term_months }} meses · {{ Number(loan.monthly_rate).toFixed(2) }} % mensual
+                {{ loan.term_months }} meses ·
+                {{ Number(loan.monthly_rate).toFixed(2) }} % mensual
               </p>
             </Link>
           </li>

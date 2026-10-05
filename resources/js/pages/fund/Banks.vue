@@ -91,50 +91,58 @@ function toggleBank(item: Bank): void {
         </form>
       </div>
     </section>
-    <section class="space-y-3" aria-labelledby="bank-catalog-title">
-      <h2 id="bank-catalog-title" class="text-lg font-semibold">Catálogo</h2>
+    <section
+      class="space-y-3"
+      aria-labelledby="bank-catalog-title"
+    >
+      <h2
+        id="bank-catalog-title"
+        class="text-lg font-semibold"
+      >
+        Catálogo
+      </h2>
       <p
-          v-if="!banks.data.length"
-          class="text-sm text-muted-foreground"
+        v-if="!banks.data.length"
+        class="text-sm text-muted-foreground"
+      >
+        No hay bancos registrados.
+      </p>
+      <ul
+        v-else
+        class="divide-y"
+      >
+        <li
+          v-for="item in banks.data"
+          :key="item.id"
+          class="flex flex-wrap items-center justify-between gap-2 py-3"
         >
-          No hay bancos registrados.
-        </p>
-        <ul
-          v-else
-          class="divide-y"
-        >
-          <li
-            v-for="item in banks.data"
-            :key="item.id"
-            class="flex flex-wrap items-center justify-between gap-2 py-3"
+          <div class="min-w-0 flex-1">
+            <p class="font-medium">{{ item.name }}</p>
+            <p class="text-xs text-muted-foreground">
+              {{
+                item.active
+                  ? 'Disponible para nuevos comprobantes'
+                  : 'Solo para consultar comprobantes anteriores'
+              }}
+            </p>
+          </div>
+          <Button
+            size="sm"
+            class="min-h-11"
+            variant="outline"
+            :disabled="updating.processing"
+            @click="toggleBank(item)"
+            >{{ item.active ? 'Desactivar' : 'Activar' }}</Button
           >
-            <div class="min-w-0 flex-1">
-              <p class="font-medium">{{ item.name }}</p>
-              <p class="text-xs text-muted-foreground">
-                {{
-                  item.active
-                    ? 'Disponible para nuevos comprobantes'
-                    : 'Solo para consultar comprobantes anteriores'
-                }}
-              </p>
-            </div>
-            <Button
-              size="sm"
-              class="min-h-11"
-              variant="outline"
-              :disabled="updating.processing"
-              @click="toggleBank(item)"
-              >{{ item.active ? 'Desactivar' : 'Activar' }}</Button
-            >
-          </li>
-        </ul>
-        <p
-          v-if="updating.hasErrors"
-          role="alert"
-          class="mt-3 text-sm text-destructive"
-        >
-          No se pudo actualizar el banco. Vuelve a intentarlo.
-        </p>
+        </li>
+      </ul>
+      <p
+        v-if="updating.hasErrors"
+        role="alert"
+        class="mt-3 text-sm text-destructive"
+      >
+        No se pudo actualizar el banco. Vuelve a intentarlo.
+      </p>
     </section>
     <FundPagination
       :links="banks.links"

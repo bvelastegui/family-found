@@ -65,7 +65,11 @@ defineProps<{
 
     <div class="space-x-1 text-center text-sm text-muted-foreground">
       <span>O puedes volver al</span>
-      <TextLink :href="login()" class="inline-flex min-h-11 items-center">inicio de sesión</TextLink>
+      <TextLink
+        :href="login()"
+        class="inline-flex min-h-11 items-center"
+        >inicio de sesión</TextLink
+      >
     </div>
   </div>
 </template>

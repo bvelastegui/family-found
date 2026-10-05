@@ -2,7 +2,12 @@
 import { Head, Link, useForm } from '@inertiajs/vue3';
 import { ArrowLeft, EllipsisVertical, Download, Pencil } from '@lucide/vue';
 import { computed } from 'vue';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { dashboard } from '@/routes';
 import { index as loansIndex } from '@/routes/fund/loans';
 import {
@@ -44,7 +49,12 @@ const props = defineProps<{
   outstandingCents: number;
   canCorrect: boolean;
 }>();
-const totalWithInterest = computed(() => props.loan.installments.reduce((total, item) => total + item.capital_cents + item.interest_cents, 0));
+const totalWithInterest = computed(() =>
+  props.loan.installments.reduce(
+    (total, item) => total + item.capital_cents + item.interest_cents,
+    0,
+  ),
+);
 defineOptions({
   layout: {
     showHeader: false,
@@ -69,32 +79,86 @@ const cancellation = useForm({ idempotency_key: operationKey(), reason: '' });
 <template>
   <main class="mx-auto flex w-full max-w-4xl flex-col gap-6 p-4 md:p-6">
     <Head :title="`Préstamo #${loan.id}`" />
-    <header class="sticky top-0 z-20 -mx-4 -mt-4 flex items-center gap-2 border-b bg-background px-3 py-2 md:-mx-6 md:-mt-6">
-      <Link :href="loansIndex()" aria-label="Volver a préstamos" class="inline-flex size-11 shrink-0 items-center justify-center rounded-md hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring"><ArrowLeft class="size-5" /></Link>
-      <h1 class="min-w-0 flex-1 text-base font-semibold">Préstamo #{{ loan.id }}</h1>
-      <FundStatus :status="loan.status" subtle />
+    <header
+      class="sticky top-0 z-20 -mx-4 -mt-4 flex items-center gap-2 border-b bg-background px-3 py-2 md:-mx-6 md:-mt-6"
+    >
+      <Link
+        :href="loansIndex()"
+        aria-label="Volver a préstamos"
+        class="inline-flex size-11 shrink-0 items-center justify-center rounded-md hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring"
+        ><ArrowLeft class="size-5"
+      /></Link>
+      <h1 class="min-w-0 flex-1 text-base font-semibold">
+        Préstamo #{{ loan.id }}
+      </h1>
+      <FundStatus
+        :status="loan.status"
+        subtle
+      />
       <DropdownMenu v-if="loan.evidence_id || canCorrect">
         <DropdownMenuTrigger as-child>
-          <Button variant="ghost" size="icon" class="size-11" aria-label="Más acciones"><EllipsisVertical class="size-5" /></Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            class="size-11"
+            aria-label="Más acciones"
+            ><EllipsisVertical class="size-5"
+          /></Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
-          <DropdownMenuItem v-if="loan.evidence_id" as-child>
-            <a :href="evidenceShow(loan.evidence_id).url"><Download class="size-4" />Descargar evidencia</a>
+          <DropdownMenuItem
+            v-if="loan.evidence_id"
+            as-child
+          >
+            <a :href="evidenceShow(loan.evidence_id).url"
+              ><Download class="size-4" />Descargar evidencia</a
+            >
           </DropdownMenuItem>
-          <DropdownMenuItem v-if="canCorrect" as-child>
-            <Link :href="correctLoan(loan.id)"><Pencil class="size-4" />Preparar corrección</Link>
+          <DropdownMenuItem
+            v-if="canCorrect"
+            as-child
+          >
+            <Link :href="correctLoan(loan.id)"
+              ><Pencil class="size-4" />Preparar corrección</Link
+            >
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
     </header>
-    <section class="space-y-3" aria-label="Detalles del préstamo">
+    <section
+      class="space-y-3"
+      aria-label="Detalles del préstamo"
+    >
       <p class="text-sm font-medium break-words">{{ loan.user.name }}</p>
       <dl class="grid grid-cols-2 gap-4 text-sm">
-        <div><dt class="text-muted-foreground">Monto del préstamo</dt><dd class="mt-1 font-semibold tabular-nums">{{ usd(loan.principal_cents) }}</dd></div>
-        <div><dt class="text-muted-foreground">Saldo pendiente</dt><dd class="mt-1 font-semibold tabular-nums text-primary">{{ usd(outstandingCents) }}</dd></div>
-        <div><dt class="text-muted-foreground">Tasa mensual</dt><dd class="mt-1 font-medium">{{ Number(loan.monthly_rate).toFixed(2) }} %</dd></div>
-        <div><dt class="text-muted-foreground">Plazo</dt><dd class="mt-1 font-medium">{{ loan.term_months }} meses</dd></div>
-        <div v-if="loan.installments.length"><dt class="text-muted-foreground">Total con intereses</dt><dd class="mt-1 font-semibold tabular-nums">{{ usd(totalWithInterest) }}</dd></div>
+        <div>
+          <dt class="text-muted-foreground">Monto del préstamo</dt>
+          <dd class="mt-1 font-semibold tabular-nums">
+            {{ usd(loan.principal_cents) }}
+          </dd>
+        </div>
+        <div>
+          <dt class="text-muted-foreground">Saldo pendiente</dt>
+          <dd class="mt-1 font-semibold text-primary tabular-nums">
+            {{ usd(outstandingCents) }}
+          </dd>
+        </div>
+        <div>
+          <dt class="text-muted-foreground">Tasa mensual</dt>
+          <dd class="mt-1 font-medium">
+            {{ Number(loan.monthly_rate).toFixed(2) }} %
+          </dd>
+        </div>
+        <div>
+          <dt class="text-muted-foreground">Plazo</dt>
+          <dd class="mt-1 font-medium">{{ loan.term_months }} meses</dd>
+        </div>
+        <div v-if="loan.installments.length">
+          <dt class="text-muted-foreground">Total con intereses</dt>
+          <dd class="mt-1 font-semibold tabular-nums">
+            {{ usd(totalWithInterest) }}
+          </dd>
+        </div>
       </dl>
     </section>
     <section
@@ -162,7 +226,11 @@ const cancellation = useForm({ idempotency_key: operationKey(), reason: '' });
         >
           {{ message }}
         </p>
-        <Button class="min-h-12" :disabled="discharge.processing || cancellation.processing">Aprobar desembolso</Button>
+        <Button
+          class="min-h-12"
+          :disabled="discharge.processing || cancellation.processing"
+          >Aprobar desembolso</Button
+        >
       </form>
       <form
         class="flex flex-col gap-3"
@@ -198,15 +266,49 @@ const cancellation = useForm({ idempotency_key: operationKey(), reason: '' });
     >
       <h2 class="text-lg font-medium">Tabla de amortización</h2>
       <ol class="divide-y md:hidden">
-        <li v-for="item in loan.installments" :key="item.id" class="space-y-3 py-3">
+        <li
+          v-for="item in loan.installments"
+          :key="item.id"
+          class="space-y-3 py-3"
+        >
           <div class="flex items-start justify-between gap-3 text-sm">
-            <div><p class="font-medium">Cuota {{ item.number }}</p><p class="text-xs text-muted-foreground">Vence {{ fundDate(item.due_on) }}</p></div>
-            <div class="text-right"><p class="font-semibold tabular-nums">{{ usd(item.capital_cents + item.interest_cents) }}</p><p class="text-xs" :class="paidInstallmentIds.includes(item.id) ? 'text-primary' : 'text-muted-foreground'">{{ paidInstallmentIds.includes(item.id) ? 'Pagada' : 'Pendiente' }}</p></div>
+            <div>
+              <p class="font-medium">Cuota {{ item.number }}</p>
+              <p class="text-xs text-muted-foreground">
+                Vence {{ fundDate(item.due_on) }}
+              </p>
+            </div>
+            <div class="text-right">
+              <p class="font-semibold tabular-nums">
+                {{ usd(item.capital_cents + item.interest_cents) }}
+              </p>
+              <p
+                class="text-xs"
+                :class="
+                  paidInstallmentIds.includes(item.id)
+                    ? 'text-primary'
+                    : 'text-muted-foreground'
+                "
+              >
+                {{
+                  paidInstallmentIds.includes(item.id) ? 'Pagada' : 'Pendiente'
+                }}
+              </p>
+            </div>
           </div>
           <dl class="grid grid-cols-3 gap-2 text-xs">
-            <div><dt class="text-muted-foreground">Capital</dt><dd class="tabular-nums">{{ usd(item.capital_cents) }}</dd></div>
-            <div><dt class="text-muted-foreground">Interés</dt><dd class="tabular-nums">{{ usd(item.interest_cents) }}</dd></div>
-            <div><dt class="text-muted-foreground">Saldo</dt><dd class="tabular-nums">{{ usd(item.balance_cents) }}</dd></div>
+            <div>
+              <dt class="text-muted-foreground">Capital</dt>
+              <dd class="tabular-nums">{{ usd(item.capital_cents) }}</dd>
+            </div>
+            <div>
+              <dt class="text-muted-foreground">Interés</dt>
+              <dd class="tabular-nums">{{ usd(item.interest_cents) }}</dd>
+            </div>
+            <div>
+              <dt class="text-muted-foreground">Saldo</dt>
+              <dd class="tabular-nums">{{ usd(item.balance_cents) }}</dd>
+            </div>
           </dl>
         </li>
       </ol>
