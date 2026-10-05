@@ -41,8 +41,10 @@ defineProps<{
         <Input
           id="email"
           type="email"
+          class="h-12 text-base!"
+          required
           name="email"
-          autocomplete="off"
+          autocomplete="email"
           v-focus
           placeholder="email@example.com"
         />
@@ -51,7 +53,7 @@ defineProps<{
 
       <div class="my-6 flex items-center justify-start">
         <Button
-          class="w-full"
+          class="h-12 w-full rounded-xl"
           :disabled="processing"
           data-test="email-password-reset-link-button"
         >
@@ -63,7 +65,7 @@ defineProps<{
 
     <div class="space-x-1 text-center text-sm text-muted-foreground">
       <span>O puedes volver al</span>
-      <TextLink :href="login()">inicio de sesión</TextLink>
+      <TextLink :href="login()" class="inline-flex min-h-11 items-center">inicio de sesión</TextLink>
     </div>
   </div>
 </template>

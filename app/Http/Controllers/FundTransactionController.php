@@ -155,7 +155,16 @@ class FundTransactionController extends Controller
     {
         $id = $transactions->register($request->user(), (string) $request->validated('idempotency_key'), $request->transactionData(), $request->file('evidence'));
 
-        return to_route('fund.transactions.show', $id);
+        return to_route('fund.transactions.registered', $id);
+    }
+
+    public function registered(Request $request, FundTransaction $transaction): Response
+    {
+        abort_unless($transaction->user_id === $request->user()->id, 403);
+
+        return Inertia::render('fund/TransactionRegistered', [
+            'transaction' => $transaction->only(['id', 'amount_cents']),
+        ]);
     }
 
     public function show(Request $request, FundTransaction $transaction): Response

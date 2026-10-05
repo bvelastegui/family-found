@@ -51,6 +51,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('transactions', [FundTransactionController::class, 'store'])->name('transactions.store');
         Route::get('transactions/{transaction}/edit', [FundTransactionController::class, 'edit'])->name('transactions.edit');
         Route::get('transactions/{transaction}', [FundTransactionController::class, 'show'])->name('transactions.show');
+        Route::get('transactions/{transaction}/registered', [FundTransactionController::class, 'registered'])->name('transactions.registered');
         Route::post('transactions/{transaction}/approve', [FundTransactionController::class, 'approve'])->name('transactions.approve');
         Route::post('transactions/{transaction}/reject', [FundTransactionController::class, 'reject'])->name('transactions.reject');
         Route::post('transactions/{transaction}/correct', [FundTransactionController::class, 'correct'])->name('transactions.correct');

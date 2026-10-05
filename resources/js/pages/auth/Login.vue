@@ -14,8 +14,7 @@ import { request } from '@/routes/password';
 defineOptions({
   layout: {
     title: 'Ingresa a tu cuenta',
-    description:
-      'Introduce tu correo electrónico y contraseña a continuación para iniciar sesión.',
+    description: 'Accede al fondo familiar.',
   },
 });
 
@@ -47,6 +46,7 @@ defineProps<{
         <Input
           id="email"
           type="email"
+          class="h-12 text-base!"
           name="email"
           required
           v-focus
@@ -63,7 +63,7 @@ defineProps<{
           <TextLink
             v-if="canResetPassword"
             :href="request()"
-            class="text-sm"
+            class="inline-flex min-h-11 items-center text-sm"
             :tabindex="5"
           >
             ¿Olvidaste tu contraseña?
@@ -72,6 +72,7 @@ defineProps<{
         <PasswordInput
           id="password"
           name="password"
+          class="h-12 text-base!"
           required
           :tabindex="2"
           autocomplete="current-password"
@@ -83,7 +84,7 @@ defineProps<{
       <div class="flex items-center justify-between">
         <Label
           for="remember"
-          class="flex items-center space-x-3"
+          class="flex min-h-11 items-center space-x-3"
         >
           <Checkbox
             id="remember"
@@ -96,7 +97,7 @@ defineProps<{
 
       <Button
         type="submit"
-        class="mt-4 w-full"
+        class="h-12 w-full rounded-xl"
         :tabindex="4"
         :disabled="processing"
         data-test="login-button"

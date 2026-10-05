@@ -68,7 +68,7 @@ defineOptions({
         />
       </div>
       <div
-        class="flex gap-2 overflow-x-auto pb-1"
+        class="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
         role="group"
         aria-label="Filtrar aportes por estado"
       >

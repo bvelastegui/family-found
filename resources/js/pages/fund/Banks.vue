@@ -9,13 +9,6 @@ import {
 } from '@/routes/fund/banks';
 import FundPagination from '@/components/FundPagination.vue';
 import AppPageHeader from '@/components/AppPageHeader.vue';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -98,10 +91,9 @@ function toggleBank(item: Bank): void {
         </form>
       </div>
     </section>
-    <Card
-      ><CardHeader><CardTitle>Catálogo</CardTitle></CardHeader
-      ><CardContent
-        ><p
+    <section class="space-y-3" aria-labelledby="bank-catalog-title">
+      <h2 id="bank-catalog-title" class="text-lg font-semibold">Catálogo</h2>
+      <p
           v-if="!banks.data.length"
           class="text-sm text-muted-foreground"
         >
@@ -142,9 +134,9 @@ function toggleBank(item: Bank): void {
           class="mt-3 text-sm text-destructive"
         >
           No se pudo actualizar el banco. Vuelve a intentarlo.
-        </p></CardContent
-      ></Card
-    ><FundPagination
+        </p>
+    </section>
+    <FundPagination
       :links="banks.links"
       :last-page="banks.last_page"
       label="Páginas del catálogo de bancos"

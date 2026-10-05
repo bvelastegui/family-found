@@ -21,17 +21,23 @@ use Inertia\Response;
 
 class FundLoanController extends Controller
 {
-    public function index(Request $request, FundBalances $balances): Response
+    public function index(Request $request, FundBalances $balances, FundContributions $contributions): Response
     {
         $treasurer = FundSetting::current()->isTreasurer($request->user());
+        $validated = $request->validate(['status' => ['sometimes', 'nullable', 'in:reserved,disbursed,cancelled,superseded']]);
+        $status = $request->query->has('status') ? ($validated['status'] ?? '') : LoanStatus::Disbursed->value;
+        $paidInstallmentIds = $contributions->paidInstallmentIds();
+        $today = now('America/Guayaquil')->toDateString();
 
         return Inertia::render('fund/Loans', [
-            'loans' => Loan::query()->when(! $treasurer, fn ($query) => $query->where('user_id', $request->user()->id))->with('user:id,name')->latest('id')->paginate(15)->withQueryString()->through(function (Loan $loan) use ($balances): Loan {
+            'loans' => Loan::query()->when(! $treasurer, fn ($query) => $query->where('user_id', $request->user()->id))->when($status !== '', fn ($query) => $query->where('status', $status))->with('user:id,name')->withExists(['installments as has_overdue_payment' => fn ($query) => $query->where('due_on', '<', $today)->whereNotIn('id', $paidInstallmentIds)])->latest('id')->paginate(15)->withQueryString()->through(function (Loan $loan) use ($balances): Loan {
                 $loan->setAttribute('outstanding_cents', $balances->account(JournalAccount::LoanPrincipal, loanId: $loan->id));
+                $loan->setAttribute('has_overdue_payment', $loan->status === LoanStatus::Disbursed && (bool) $loan->getAttribute('has_overdue_payment'));
 
                 return $loan;
             }),
             'isTreasurer' => $treasurer,
+            'filters' => ['status' => $status],
             'reservedLoans' => $treasurer ? Loan::query()->where('status', LoanStatus::Reserved)->with('user:id,name')
                 ->orderBy('created_at')->orderBy('id')->paginate(10, ['*'], 'reserved_page')->withQueryString() : null,
         ]);
@@ -47,12 +53,12 @@ class FundLoanController extends Controller
         ]);
     }
 
-    public function show(Request $request, Loan $loan, FundContributions $contributions, FundBalances $balances): Response
+    public function show(Request $request, Loan $loan, FundContributions $contributions, FundBalances $balances, FundLoans $loans): Response
     {
         $treasurer = FundSetting::current()->isTreasurer($request->user());
         abort_unless($treasurer || $loan->user_id === $request->user()->id, 403);
 
-        return Inertia::render('fund/Loan', ['loan' => $loan->load('user:id,name', 'installments'), 'outstandingCents' => $balances->account(JournalAccount::LoanPrincipal, loanId: $loan->id), 'paidInstallmentIds' => $contributions->paidInstallmentIds(), 'isTreasurer' => $treasurer, 'banks' => $treasurer ? Bank::query()->where('active', true)->orderBy('name')->get(['id', 'name']) : []]);
+        return Inertia::render('fund/Loan', ['loan' => $loan->load('user:id,name', 'installments'), 'canCorrect' => $treasurer && $loan->status === LoanStatus::Disbursed && ! $loans->hasDependentPayments($loan), 'outstandingCents' => $balances->account(JournalAccount::LoanPrincipal, loanId: $loan->id), 'paidInstallmentIds' => $contributions->paidInstallmentIds(), 'isTreasurer' => $treasurer, 'banks' => $treasurer ? Bank::query()->where('active', true)->orderBy('name')->get(['id', 'name']) : []]);
     }
 
     public function correction(Request $request, Loan $loan, FundLoans $loans): Response

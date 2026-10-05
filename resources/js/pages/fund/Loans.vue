@@ -17,12 +17,14 @@ type Loan = {
   monthly_rate: string;
   term_months: number;
   status: string;
+  has_overdue_payment: boolean;
   user: { name: string };
 };
 defineProps<{
   loans: Pagination<Loan>;
   isTreasurer: boolean;
   reservedLoans: Pagination<Loan> | null;
+  filters: { status: string };
 }>();
 defineOptions({
   layout: {
@@ -48,8 +50,18 @@ defineOptions({
         </Button>
       </template>
     </AppPageHeader>
+    <nav class="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" aria-label="Filtrar préstamos por estado">
+      <Link
+        v-for="option in [{ label: 'Todos', value: '' }, { label: 'Reservados', value: 'reserved' }, { label: 'Desembolsados', value: 'disbursed' }, { label: 'Cancelados', value: 'cancelled' }, { label: 'Sustituidos', value: 'superseded' }]"
+        :key="option.value"
+        :href="loansIndex({ query: { status: option.value } })"
+        class="inline-flex min-h-11 shrink-0 items-center rounded-full border px-3 text-sm focus-visible:ring-2 focus-visible:ring-ring"
+        :class="filters.status === option.value ? 'border-primary bg-primary text-primary-foreground' : 'bg-background text-muted-foreground'"
+        :aria-current="filters.status === option.value ? 'true' : undefined"
+      >{{ option.label }}</Link>
+    </nav>
     <section
-      v-if="reservedLoans"
+      v-if="reservedLoans && filters.status === 'reserved'"
       aria-labelledby="reserved-title"
       class="flex flex-col gap-4"
     >
@@ -172,20 +184,10 @@ defineOptions({
       />
     </section>
     <section
+      v-if="!reservedLoans || filters.status !== 'reserved'"
       class="flex flex-col gap-4"
-      aria-labelledby="loans-title"
+      aria-label="Préstamos"
     >
-      <div>
-        <h2
-          id="loans-title"
-          class="text-lg font-semibold"
-        >
-          Historial de préstamos
-        </h2>
-        <p class="mt-1 text-sm text-muted-foreground">
-          Las reservas y los desembolsos mantienen su propio historial.
-        </p>
-      </div>
       <p
         v-if="!loans.data.length"
         class="py-8 text-center text-sm text-muted-foreground"
@@ -221,24 +223,13 @@ defineOptions({
                   subtle
                 />
               </div>
-              <dl class="grid grid-cols-2 gap-3 text-xs">
-                <div>
-                  <dt class="text-muted-foreground">Monto del préstamo</dt>
-                  <dd class="mt-1 text-sm font-medium tabular-nums">
-                    {{ usd(loan.principal_cents) }}
-                  </dd>
-                </div>
-                <div>
-                  <dt class="text-muted-foreground">Saldo pendiente</dt>
-                  <dd
-                    class="mt-1 text-sm font-semibold text-primary tabular-nums"
-                  >
-                    {{ usd(loan.outstanding_cents) }}
-                  </dd>
-                </div>
-              </dl>
+              <p class="flex items-center justify-between gap-3 text-sm">
+                <span class="text-muted-foreground">Saldo pendiente</span>
+                <span class="font-semibold text-primary tabular-nums">{{ usd(loan.outstanding_cents) }}</span>
+              </p>
+              <p v-if="loan.has_overdue_payment" class="text-xs font-medium text-destructive">Pago atrasado</p>
               <p class="text-xs text-muted-foreground">
-                {{ loan.term_months }} meses · {{ loan.monthly_rate }} % mensual
+                {{ loan.term_months }} meses · {{ Number(loan.monthly_rate).toFixed(2) }} % mensual
               </p>
             </Link>
           </li>
@@ -326,7 +317,7 @@ defineOptions({
                   {{ usd(loan.outstanding_cents) }}
                 </td>
                 <td class="px-4 py-3 text-right tabular-nums">
-                  {{ loan.monthly_rate }} %
+                  {{ Number(loan.monthly_rate).toFixed(2) }} %
                 </td>
                 <td class="px-4 py-3 text-right tabular-nums">
                   {{ loan.term_months }} meses
@@ -349,6 +340,7 @@ defineOptions({
       </div>
     </section>
     <FundPagination
+      v-if="!reservedLoans || filters.status !== 'reserved'"
       :links="loans.links"
       :last-page="loans.last_page"
       label="Páginas de préstamos"
