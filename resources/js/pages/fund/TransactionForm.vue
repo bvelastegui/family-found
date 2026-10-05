@@ -30,6 +30,7 @@ const props = defineProps<{
   hasPendingContribution: boolean;
   today: string;
   sharedEvidence?: { name: string; mime: string; contents: string } | null;
+  errors?: { evidence?: string };
 }>();
 defineOptions({
   layout: {
@@ -313,6 +314,13 @@ function next(): void {
     class="mx-auto flex w-full max-w-2xl flex-col gap-4 p-4 pb-48 sm:gap-6 sm:p-6"
   >
     <Head title="Registrar transferencia" />
+    <p
+      v-if="errors?.evidence && !form.errors.evidence"
+      role="alert"
+      class="border-s-2 border-destructive ps-3 text-sm text-destructive"
+    >
+      {{ errors.evidence }}
+    </p>
     <header class="flex items-center gap-3">
       <Link
         :href="transactionsIndex()"

@@ -19,6 +19,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Validator;
 use Inertia\Inertia;
 use Inertia\Response;
 use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
@@ -128,13 +129,19 @@ class FundTransactionController extends Controller
 
     public function share(Request $request): RedirectResponse
     {
-        $validated = $request->validate([
+        $validator = Validator::make($request->all(), [
             'evidence' => ['required', 'file', 'mimes:jpg,jpeg,png,pdf', 'max:10240'],
         ], [
             'evidence.required' => 'Comparte una imagen JPG, PNG o un archivo PDF.',
             'evidence.mimes' => 'El comprobante debe ser una imagen JPG, PNG o un archivo PDF.',
             'evidence.max' => 'El comprobante debe pesar como máximo 10 MB.',
         ]);
+
+        if ($validator->fails()) {
+            return to_route('fund.transactions.create')->withErrors($validator);
+        }
+
+        $validated = $validator->validated();
 
         $file = $validated['evidence'];
         $contentType = $file->getMimeType();
