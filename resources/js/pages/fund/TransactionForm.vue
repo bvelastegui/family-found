@@ -28,6 +28,7 @@ const props = defineProps<{
   periods: Period[];
   loans: { id: number; installments: Installment[] }[];
   hasPendingContribution: boolean;
+  today: string;
   sharedEvidence?: { name: string; mime: string; contents: string } | null;
 }>();
 defineOptions({
@@ -63,12 +64,30 @@ const form = useForm({
   idempotency_key: operationKey(),
   bank_id: '',
   reference: '',
-  transaction_date: '',
+  transaction_date: props.today,
   amount: '',
   period_ids: [] as number[],
   installment_ids: [] as number[],
   evidence: null as File | null,
 });
+const dateInput = ref<HTMLInputElement | null>(null);
+const enteringDateManually = ref(false);
+
+function openDatePicker(): void {
+  const input = dateInput.value;
+  if (!input) {
+    return;
+  }
+  try {
+    if (input.showPicker) {
+      input.showPicker();
+      return;
+    }
+  } catch {
+    enteringDateManually.value = true;
+  }
+  input.focus();
+}
 const months = computed(() => {
   const available: Period[] = [];
   let expectedMonth: number | null = null;
@@ -516,18 +535,26 @@ function next(): void {
           </p>
         </div>
         <div class="grid gap-2">
-          <Label for="date">Fecha de transferencia</Label
-          ><Input
+          <Label for="date">Fecha de transferencia</Label>
+          <div class="flex min-w-0 items-center gap-2">
+          <input
             id="date"
+            ref="dateInput"
             v-model="form.transaction_date"
-            type="date"
+            :type="enteringDateManually ? 'text' : 'date'"
+            :placeholder="enteringDateManually ? 'AAAA-MM-DD' : undefined"
             required
-            class="h-12 min-w-0 text-base!"
+            class="h-12 min-w-0 flex-1 rounded-md border border-input bg-background px-3 text-base focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             :aria-invalid="!!form.errors.transaction_date"
             :aria-describedby="
               form.errors.transaction_date ? 'date-error' : undefined
             "
           />
+          <Button v-if="!enteringDateManually" type="button" variant="outline" class="h-12" @click="openDatePicker">Cambiar</Button>
+          </div>
+          <button type="button" class="min-h-11 justify-self-start text-sm text-muted-foreground underline underline-offset-4" @click="enteringDateManually = !enteringDateManually">
+            {{ enteringDateManually ? 'Usar calendario' : 'Escribir fecha manualmente' }}
+          </button>
           <p
             v-if="form.errors.transaction_date"
             id="date-error"

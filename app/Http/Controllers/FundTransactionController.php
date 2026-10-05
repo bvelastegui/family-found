@@ -106,6 +106,7 @@ class FundTransactionController extends Controller
             'periods' => $periods->map(fn ($period) => ['id' => $period->id, 'month' => $period->month->format('Y-m'), 'amount_cents' => $period->amount_cents, 'paid' => in_array($period->id, $paid, true)]),
             'loans' => $loans->map(fn (Loan $loan): array => ['id' => $loan->id, 'installments' => $loan->installments->map(fn (LoanInstallment $installment): array => ['id' => $installment->id, 'number' => $installment->number, 'amount_cents' => $installment->capital_cents + $installment->interest_cents, 'paid' => in_array($installment->id, $paidInstallments, true)])->all()])->all(),
             'hasPendingContribution' => FundTransaction::query()->where('pending_contributor_id', $user->id)->exists(),
+            'today' => now('America/Guayaquil')->toDateString(),
             'sharedEvidence' => $this->pullSharedEvidence($request),
         ]);
     }
